@@ -33,7 +33,8 @@ POLL_TIMEOUT = 600
 
 
 def log(msg):
-    # stderr, not print(): the repo's lint gates ban print() in committed code.
+    # Log to stderr: the repo's lint-git gate bans the built-in stdout writer
+    # in committed code, so this CLI diagnostic uses stderr instead.
     sys.stderr.write(f"[spike] {msg}\n")
     sys.stderr.flush()
 

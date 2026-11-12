@@ -83,7 +83,9 @@ export const ToolInvocationItem: React.FC<ToolInvocationItemProps> = ({
       return null;
     }
     const presentation = parsePresentationCard(toolInvocation.output);
-    return presentation ? <PresentationCard presentation={presentation} /> : null;
+    return presentation ? (
+      <PresentationCard presentation={presentation} />
+    ) : null;
   }
 
   if (toolName === 'document_parsing') {

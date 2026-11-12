@@ -35,11 +35,23 @@ describe('parsePresentationCard', () => {
     ['non-record presentation', { presentation: 'x' }],
     ['missing title', { presentation: { ...CARD, title: undefined } }],
     ['empty title', { presentation: { ...CARD, title: '' } }],
-    ['non-integer slide count', { presentation: { ...CARD, slide_count: 1.5 } }],
+    [
+      'non-integer slide count',
+      { presentation: { ...CARD, slide_count: 1.5 } },
+    ],
     ['negative slide count', { presentation: { ...CARD, slide_count: -1 } }],
-    ['javascript editor url', { presentation: { ...CARD, editor_url: 'javascript:alert(1)' } }],
-    ['relative editor url', { presentation: { ...CARD, editor_url: '/presentation?id=1' } }],
-    ['javascript download url', { presentation: { ...CARD, download_url: 'javascript:alert(1)' } }],
+    [
+      'javascript editor url',
+      { presentation: { ...CARD, editor_url: 'javascript:alert(1)' } },
+    ],
+    [
+      'relative editor url',
+      { presentation: { ...CARD, editor_url: '/presentation?id=1' } },
+    ],
+    [
+      'javascript download url',
+      { presentation: { ...CARD, download_url: 'javascript:alert(1)' } },
+    ],
     ['missing link id', { presentation: { ...CARD, link_id: undefined } }],
   ])('rejects %s', (_label, output) => {
     expect(parsePresentationCard(output)).toBeNull();
@@ -47,7 +59,9 @@ describe('parsePresentationCard', () => {
 
   it('rejects over-long text', () => {
     expect(
-      parsePresentationCard({ presentation: { ...CARD, title: 'x'.repeat(301) } }),
+      parsePresentationCard({
+        presentation: { ...CARD, title: 'x'.repeat(301) },
+      }),
     ).toBeNull();
   });
 });
