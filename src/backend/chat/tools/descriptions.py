@@ -137,9 +137,10 @@ Rework an existing slide deck using the comments pinned to its slides.
 
 Use this tool when the user asks to revise, rework, improve or apply feedback
 to a presentation that was already generated in this conversation. The deck
-card carries its presentation_id; pass that id. The tool reads the latest
-version of the deck (including the user's manual edits), applies each
-unresolved comment to its slide, and marks the comments addressed.
+to revise defaults to the most recent deck in this conversation, so you can
+call it without an id. The tool reads the latest version of the deck
+(including the user's manual edits), applies each unresolved comment to its
+slide, and marks the comments addressed.
 
 Pass an optional instruction for overall guidance (tone, length, language).
 Do not restate the deck's content; tell the user the revision is ready to

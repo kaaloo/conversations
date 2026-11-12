@@ -30,6 +30,16 @@ def _get_link(conversation, presentation_id: str) -> ChatPresentationLink | None
 
 
 @sync_to_async
+def _latest_link(conversation) -> ChatPresentationLink | None:
+    """The conversation's most recent deck, when no id is supplied."""
+    return (
+        ChatPresentationLink.objects.filter(conversation=conversation)
+        .order_by("-created_at")
+        .first()
+    )
+
+
+@sync_to_async
 def _unresolved_comments(link: ChatPresentationLink) -> list[PresentationComment]:
     return list(link.comments.filter(resolved=False).order_by("slide_index", "created_at"))
 
@@ -52,21 +62,25 @@ def _build_prompt(comment: PresentationComment, instruction: str) -> str:
 
 @last_model_retry_soft_fail
 async def revise_presentation_sidecar(
-    ctx: RunContext, presentation_id: str, instruction: str = ""
+    ctx: RunContext, presentation_id: str = "", instruction: str = ""
 ) -> ToolReturn:
     """
     Rework a presentation using the comments pinned to its slides.
 
     Args:
-        presentation_id: The deck to revise (from the deck card).
+        presentation_id: The deck to revise. Optional — defaults to the most
+            recent deck generated in this conversation.
         instruction: Optional overall guidance to apply alongside the comments.
 
     Returns:
         ToolReturn: confirmation carrying the refreshed deck card metadata.
     """
-    link = await _get_link(ctx.deps.conversation, presentation_id)
+    if presentation_id:
+        link = await _get_link(ctx.deps.conversation, presentation_id)
+    else:
+        link = await _latest_link(ctx.deps.conversation)
     if link is None:
-        raise ModelCannotRetry("No presentation with that id belongs to this conversation.")
+        raise ModelCannotRetry("No presentation belongs to this conversation. Generate one first.")
 
     comments = await _unresolved_comments(link)
     if not comments:

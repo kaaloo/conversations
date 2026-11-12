@@ -114,7 +114,7 @@ async def test_rework_unknown_deck_cannot_retry(ctx, mock_client):  # pylint: di
     """
     result = await revise_presentation_sidecar(ctx, "99999999-9999-9999-9999-999999999999")
     assert isinstance(result, str)
-    assert "No presentation with that id" in result
+    assert "No presentation belongs to this conversation" in result
 
 
 @pytest.mark.asyncio
@@ -196,3 +196,30 @@ async def test_rework_persists_completed_comments_on_later_failure(ctx, link, mo
     second_refreshed = await sync_to_async(PresentationComment.objects.get)(pk=second.pk)
     assert first_refreshed.resolved is True
     assert second_refreshed.resolved is False
+
+
+@pytest.mark.asyncio
+async def test_rework_defaults_to_latest_deck(ctx, link, mock_client):
+    """Without an id, the tool revises the conversation's most recent deck.
+
+    The model never sees the deck UUID (it lives in tool metadata, not the
+    model-visible return), so the common flow must not require it.
+    """
+    link.presentation_id = "11111111-1111-1111-1111-111111111111"
+    await sync_to_async(link.save)()
+    await sync_to_async(PresentationCommentFactory)(link=link, slide_index=1, body="shorten")
+
+    result = await revise_presentation_sidecar(ctx)
+
+    mock_client.get_presentation.assert_awaited_with("11111111-1111-1111-1111-111111111111")
+    assert (
+        result.metadata["presentation"]["presentation_id"] == "11111111-1111-1111-1111-111111111111"
+    )
+
+
+@pytest.mark.asyncio
+async def test_rework_no_deck_soft_fails(ctx, mock_client):
+    """With no deck in the conversation, the tool soft-fails with guidance."""
+    result = await revise_presentation_sidecar(ctx)
+    assert isinstance(result, str)
+    assert "Generate one first" in result
