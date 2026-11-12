@@ -3,12 +3,30 @@
 #
 #   docker compose -f compose.yml -f compose.presenton.yml up -d presenton
 #
+# To enable the feature in the backend, also start app-dev with this overlay
+# (it injects the PRESENTON_* settings and the feature flag below):
+#
+#   docker compose -f compose.yml -f compose.presenton.yml up -d app-dev presenton
+#
 # Security posture: the sidecar binds to loopback only and runs with
 # DISABLE_AUTH=true (single-user runtime). That disables API authentication
 # too, so never publish this port beyond 127.0.0.1 and never use this overlay
 # on a shared or public host.
 
 services:
+  # Inject the sidecar connection settings into the backend. The base
+  # compose.yml app-dev only loads common + postgresql env files, so without
+  # this the backend would see PRESENTON_BASE_URL unset and every generation
+  # would fail as unconfigured. Values come from the shell environment
+  # (source env.d/development/presenton first); defaults suit the compose
+  # network where the backend reaches the sidecar by service name.
+  app-dev:
+    environment:
+      - FEATURE_FLAG_PRESENTON_SIDECAR=${FEATURE_FLAG_PRESENTON_SIDECAR:-enabled}
+      - PRESENTON_BASE_URL=${PRESENTON_BASE_URL:-http://presenton:80}
+      - PRESENTON_BROWSER_BASE_URL=${PRESENTON_BROWSER_BASE_URL:-http://localhost:5001}
+      - PRESENTON_API_KEY=${PRESENTON_API_KEY:-}
+
   presenton:
     image: ghcr.io/presenton/presenton:v0.9.12-beta
     ports:
