@@ -110,11 +110,12 @@ async def revise_presentation_sidecar(
         # the current id instead of the stale one (which would 404).
         if isinstance(edited, dict) and edited.get("id"):
             by_index[comment.slide_index] = edited
+        # Persist immediately: Presenton has already committed this edit, so a
+        # later comment's failure must not leave this one unresolved (a retry
+        # would reapply it and compound non-idempotent changes).
+        await _mark_resolved([comment.pk])
         resolved_ids.append(comment.pk)
         edited_slides.add(comment.slide_index)
-
-    if resolved_ids:
-        await _mark_resolved(resolved_ids)
 
     # Re-export so the card's download link reflects the revised deck.
     download_url = None

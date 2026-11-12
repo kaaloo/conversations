@@ -170,3 +170,29 @@ async def test_rework_tracks_replacement_slide_id(ctx, link, mock_client):
     assert len(calls) == 2
     assert calls[0].args[0] == "slide-1"
     assert calls[1].args[0] == "slide-1-new"
+
+
+@pytest.mark.asyncio
+async def test_rework_persists_completed_comments_on_later_failure(ctx, link, mock_client):
+    """A later edit failure must not un-resolve earlier successful comments.
+
+    Presenton commits each edit immediately, so reapplying an already-applied
+    comment on retry would compound non-idempotent changes.
+    """
+    link.presentation_id = "11111111-1111-1111-1111-111111111111"
+    await sync_to_async(link.save)()
+    first = await sync_to_async(PresentationCommentFactory)(link=link, slide_index=0, body="first")
+    second = await sync_to_async(PresentationCommentFactory)(
+        link=link, slide_index=1, body="second"
+    )
+    mock_client.edit_slide_ai = AsyncMock(
+        side_effect=[{"id": "slide-0-new", "index": 0}, PresentonError("boom")]
+    )
+
+    with pytest.raises(ModelRetry):
+        await revise_presentation_sidecar(ctx, "11111111-1111-1111-1111-111111111111")
+
+    first_refreshed = await sync_to_async(PresentationComment.objects.get)(pk=first.pk)
+    second_refreshed = await sync_to_async(PresentationComment.objects.get)(pk=second.pk)
+    assert first_refreshed.resolved is True
+    assert second_refreshed.resolved is False
