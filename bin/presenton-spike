@@ -209,9 +209,17 @@ def main():
     if derived_id == presentation_id:
         raise RuntimeError("derive returned the same id (expected a new presentation)")
     original = client.request("GET", f"{API}/presentation/{presentation_id}")
-    orig_title_content = json.dumps(original["slides"][0].get("content"), sort_keys=True)
-    if new_title not in orig_title_content:
-        raise RuntimeError("derive mutated the original presentation")
+    # Compare EVERY slide's full content against the post-edit snapshot, not
+    # just slide 0's title: a derive that corrupts another slide (or rewrites
+    # slide 0 while keeping its title) must fail this check.
+    original_after = {
+        s["index"]: json.dumps(s.get("content"), sort_keys=True)
+        for s in original["slides"]
+    }
+    if original_after != after:
+        keys = set(original_after) | set(after)
+        mutated = sorted(i for i in keys if original_after.get(i) != after.get(i))
+        raise RuntimeError(f"derive mutated the original presentation (slides: {mutated})")
     log(f"derive ok: new id {derived_id}, original untouched")
     findings["derived_id"] = derived_id
     findings["derive_preserves_original"] = True
