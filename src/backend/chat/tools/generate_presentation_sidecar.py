@@ -15,6 +15,7 @@ from pydantic_ai.messages import ToolReturn
 from core.log_fields import safe_error_fields
 
 from chat.models import ChatPresentationLink
+from chat.presentation_versions import record_version
 from chat.presenton_client import PresentonClient, PresentonError
 from chat.tools.exceptions import ModelCannotRetry
 from chat.tools.utils import last_model_retry_soft_fail
@@ -95,6 +96,7 @@ async def generate_presentation_sidecar(ctx: RunContext, brief: str) -> ToolRetu
 
     title = (deck.get("title") or "").strip() or "Presentation"
     link = await _create_link(ctx.deps.conversation, presentation_id, title)
+    await record_version(link, deck, "generated")
 
     card = {
         "presentation_id": str(presentation_id),

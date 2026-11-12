@@ -95,3 +95,16 @@ class PresentationCommentFactory(factory.django.DjangoModelFactory):
 
     class Meta:
         model = models.PresentationComment
+
+
+class PresentationVersionFactory(factory.django.DjangoModelFactory):
+    """Factory for deck version snapshots (slides-loop POC, P5)."""
+
+    link = factory.SubFactory(ChatPresentationLinkFactory)
+    number = factory.Sequence(lambda n: n + 1)
+    source = models.PresentationVersion.Source.GENERATED
+    slides = factory.LazyFunction(list)
+    slide_count = 0
+
+    class Meta:
+        model = models.PresentationVersion

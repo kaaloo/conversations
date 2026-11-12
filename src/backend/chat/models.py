@@ -569,3 +569,54 @@ class PresentationComment(BaseModel):
 
     def __str__(self):
         return f"{self.link_id} slide {self.slide_index}: {self.body[:40]}"
+
+
+class PresentationVersion(BaseModel):
+    """A point-in-time snapshot of a sidecar deck (slides-loop POC, P5).
+
+    Presenton mutates decks in place, so Conversations keeps its own version
+    history: each generation, rework or restore records the deck's slide
+    content here. Restoring re-applies a snapshot's content to the live deck
+    via the sidecar's deep-merge edit, then records a new version.
+    """
+
+    class Source(models.TextChoices):  # pylint: disable=missing-class-docstring
+        GENERATED = "generated", "Generated"
+        REWORK = "rework", "Rework"
+        RESTORE = "restore", "Restore"
+
+    link = models.ForeignKey(
+        ChatPresentationLink,
+        related_name="versions",
+        on_delete=models.CASCADE,
+        help_text="Deck this version belongs to",
+    )
+    number = models.PositiveIntegerField(
+        help_text="1-based version number within the deck",
+    )
+    source = models.CharField(
+        max_length=16,
+        choices=Source.choices,
+        default=Source.GENERATED,
+        help_text="What produced this version",
+    )
+    slides = NulSafeJSONField(
+        default=list,
+        blank=True,
+        help_text="Snapshot of the deck's slide content at this version",
+    )
+    slide_count = models.PositiveIntegerField(
+        default=0,
+        help_text="Number of slides in this version",
+    )
+
+    class Meta:  # pylint: disable=missing-class-docstring
+        ordering = ["number"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["link", "number"], name="unique_version_number_per_link"
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.link_id} v{self.number} ({self.source})"

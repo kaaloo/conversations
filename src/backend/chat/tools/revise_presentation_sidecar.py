@@ -15,6 +15,7 @@ from pydantic_ai.messages import ToolReturn
 from core.log_fields import safe_error_fields
 
 from chat.models import ChatPresentationLink, PresentationComment
+from chat.presentation_versions import record_version
 from chat.presenton_client import PresentonClient, PresentonError
 from chat.tools.exceptions import ModelCannotRetry
 from chat.tools.utils import last_model_retry_soft_fail
@@ -130,6 +131,14 @@ async def revise_presentation_sidecar(
         await _mark_resolved([comment.pk])
         resolved_ids.append(comment.pk)
         edited_slides.add(comment.slide_index)
+
+    # Snapshot the revised deck so the version history reflects the rework.
+    if resolved_ids:
+        try:
+            revised_deck = await client.get_presentation(str(link.presentation_id))
+            await record_version(link, revised_deck, "rework")
+        except PresentonError as exc:
+            logger.warning("presenton_rework_snapshot_failed", **safe_error_fields(exc))
 
     # Re-export so the card's download link reflects the revised deck.
     download_url = None

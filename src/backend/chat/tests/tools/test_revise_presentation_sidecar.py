@@ -80,7 +80,9 @@ async def test_rework_applies_comments_and_resolves(ctx, link, mock_client):
 
     result = await revise_presentation_sidecar(ctx, "11111111-1111-1111-1111-111111111111")
 
-    mock_client.get_presentation.assert_awaited_once_with("11111111-1111-1111-1111-111111111111")
+    # Read once to apply comments, once more to snapshot the revised deck.
+    assert mock_client.get_presentation.await_count == 2
+    mock_client.get_presentation.assert_awaited_with("11111111-1111-1111-1111-111111111111")
     mock_client.edit_slide_ai.assert_awaited_once()
     args = mock_client.edit_slide_ai.await_args.args
     assert args[0] == "slide-1"
