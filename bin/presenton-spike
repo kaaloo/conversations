@@ -168,9 +168,12 @@ def main():
     log(f"deck: {len(slides)} slides, title={deck.get('title')!r}")
     findings["n_slides"] = len(slides)
 
-    # 4. Targeted edit: change slide 0's title via deep-merge, verify the
-    #    other slides' content is untouched.
-    before = {s["index"]: json.dumps(s.get("content"), sort_keys=True) for s in slides}
+    # 4. Targeted edit: change slide 0's title via deep-merge. Verify BOTH
+    #    that other slides are untouched AND that slide 0 keeps every field
+    #    it had before, with only the title replaced (a wholesale content
+    #    replacement that drops the body must fail this check).
+    before_content = {s["index"]: s.get("content") or {} for s in slides}
+    before = {i: json.dumps(c, sort_keys=True) for i, c in before_content.items()}
     new_title = "POC Spike Edited Title"
     edit_content = {"title": new_title}
     edited = client.request(
@@ -185,13 +188,19 @@ def main():
     )
     log(f"edit ok: {json.dumps(edited)}")
     deck_after = client.request("GET", f"{API}/presentation/{presentation_id}")
-    after = {s["index"]: json.dumps(s.get("content"), sort_keys=True) for s in deck_after["slides"]}
+    after_content = {s["index"]: s.get("content") or {} for s in deck_after["slides"]}
+    after = {i: json.dumps(c, sort_keys=True) for i, c in after_content.items()}
     changed = [i for i in before if before[i] != after.get(i)]
     if changed != [0]:
         raise RuntimeError(f"edit touched unexpected slides: {changed} (expected [0])")
-    if new_title not in after[0]:
-        raise RuntimeError("edited title not present in slide 0 content")
-    log("edit verified: only slide 0 changed, title updated")
+    expected_slide0 = {**before_content[0], **edit_content}
+    if after_content.get(0) != expected_slide0:
+        raise RuntimeError(
+            "edit did not deep-merge slide 0: expected previous fields preserved "
+            f"with only the title replaced, got {after_content.get(0)!r}"
+        )
+    log("edit verified: only slide 0 changed, other fields preserved, title updated")
+    findings["edit_deep_merges_target_slide"] = True
     findings["edit_preserves_other_slides"] = True
 
     # 5. Derive a copy (versioning primitive); original must stay intact.
@@ -243,6 +252,11 @@ def main():
 
     # 7. Editor framing probe.
     findings["editor"] = probe_editor(client, presentation_id)
+    if not findings["editor"]["framable"]:
+        raise RuntimeError(
+            "editor explicitly forbids framing (X-Frame-Options or CSP "
+            "frame-ancestors): the in-app iframe requirement is not met"
+        )
 
     (out / "findings.json").write_text(json.dumps(findings, indent=2))
     log(f"ALL CHECKS PASSED - findings written to {out / 'findings.json'}")
