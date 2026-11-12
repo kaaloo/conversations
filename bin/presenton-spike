@@ -204,12 +204,13 @@ def main():
     findings["edit_preserves_other_slides"] = True
 
     # 5. Derive a copy (versioning primitive); original must stay intact.
+    derive_content = {"title": "Derived Copy Title"}
     derived = client.request(
         "POST",
         f"{API}/presentation/derive",
         {
             "presentation_id": presentation_id,
-            "slides": [{"index": 0, "content": {"title": "Derived Copy Title"}}],
+            "slides": [{"index": 0, "content": derive_content}],
             "export_as": "pptx",
         },
         timeout=300,
@@ -229,9 +230,23 @@ def main():
         keys = set(original_after) | set(after)
         mutated = sorted(i for i in keys if original_after.get(i) != after.get(i))
         raise RuntimeError(f"derive mutated the original presentation (slides: {mutated})")
-    log(f"derive ok: new id {derived_id}, original untouched")
+    # The derived deck must actually contain the requested change: fetch it
+    # and compare every slide against the post-edit snapshot with only the
+    # requested slide-0 change applied (a derive that ignores the payload
+    # must fail this check).
+    derived_deck = client.request("GET", f"{API}/presentation/{derived_id}")
+    derived_content = {s["index"]: s.get("content") or {} for s in derived_deck["slides"]}
+    expected_derived = dict(after_content)
+    expected_derived[0] = {**after_content[0], **derive_content}
+    if derived_content != expected_derived:
+        raise RuntimeError(
+            "derived deck does not match the requested change: expected "
+            f"{expected_derived!r}, got {derived_content!r}"
+        )
+    log(f"derive ok: new id {derived_id}, original untouched, change applied")
     findings["derived_id"] = derived_id
     findings["derive_preserves_original"] = True
+    findings["derive_applies_requested_change"] = True
 
     # 6. Export check: fetch the PPTX for both decks and validate structure.
     for label, deck_id, path in (
