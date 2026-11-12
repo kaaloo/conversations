@@ -10,6 +10,7 @@ and this project adheres to
 
 ### Added
 
+- 🧪(poc) Presenton sidecar compose overlay, runbook and API spike
 - ✨(front) draw spreadsheet query charts
 - ✨(back) chart spreadsheet query results on request
 - ✨(back) add a calculator tool for exact arithmetic
