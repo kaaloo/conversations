@@ -33,6 +33,11 @@ class PresentonClient:
 
     def __init__(self):
         self.base_url = (settings.PRESENTON_BASE_URL or "").rstrip("/")
+        # The backend reaches the sidecar over the compose network (e.g.
+        # http://presenton:80) while the browser reaches its published port
+        # (e.g. http://localhost:5001). Card URLs must use the browser-facing
+        # address; fall back to the API base when no separate one is set.
+        self.browser_base_url = (settings.PRESENTON_BROWSER_BASE_URL or self.base_url).rstrip("/")
         self.api_key = settings.PRESENTON_API_KEY
         self.timeout = settings.PRESENTON_API_TIMEOUT
         self.api_url = f"{self.base_url}/api/v1/ppt/" if self.base_url else ""
@@ -134,7 +139,7 @@ class PresentonClient:
         """
         if not self.configured:
             raise PresentonError("PRESENTON_BASE_URL is not configured")
-        return f"{self.base_url}/presentation?id={presentation_id}"
+        return f"{self.browser_base_url}/presentation?id={presentation_id}"
 
     def export_url(self, path: str) -> str:
         """Absolute URL for an export path returned by the API.
@@ -146,4 +151,4 @@ class PresentonClient:
             raise PresentonError("PRESENTON_BASE_URL is not configured")
         if path.startswith("http"):
             return path
-        return f"{self.base_url}/{path.lstrip('/')}"
+        return f"{self.browser_base_url}/{path.lstrip('/')}"

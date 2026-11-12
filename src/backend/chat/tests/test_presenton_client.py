@@ -195,3 +195,30 @@ def test_export_url_relative_and_absolute(client):
         == "http://presenton.example.com/app_data/exports/x.pptx"
     )
     assert client.export_url("http://other/x.pptx") == "http://other/x.pptx"
+
+
+def test_card_urls_use_browser_base(presenton_settings):
+    """Editor/export URLs use the browser-facing origin, not the API address.
+
+    In compose the backend reaches http://presenton:80 but the browser needs
+    the published http://localhost:5001; card actions must be browser-usable.
+    """
+    presenton_settings.PRESENTON_BASE_URL = "http://presenton:80"
+    presenton_settings.PRESENTON_BROWSER_BASE_URL = "http://localhost:5001/"
+    client = PresentonClient()
+    # API calls still target the compose service address.
+    assert client.api_url == "http://presenton:80/api/v1/ppt/"
+    # Card URLs target the browser-facing origin (trailing slash trimmed).
+    assert client.editor_url("abc") == "http://localhost:5001/presentation?id=abc"
+    assert (
+        client.export_url("/app_data/exports/x.pptx")
+        == "http://localhost:5001/app_data/exports/x.pptx"
+    )
+
+
+def test_browser_base_defaults_to_api_base(presenton_settings):
+    """Without a separate browser base, card URLs fall back to the API base."""
+    presenton_settings.PRESENTON_BASE_URL = "http://localhost:5001"
+    presenton_settings.PRESENTON_BROWSER_BASE_URL = None
+    client = PresentonClient()
+    assert client.editor_url("abc") == "http://localhost:5001/presentation?id=abc"

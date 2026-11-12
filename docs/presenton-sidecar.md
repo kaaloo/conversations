@@ -41,6 +41,23 @@ docker compose -f compose.yml -f compose.presenton.yml ps presenton
 State lives in `./data/presenton` (gitignored): database, exports, uploads.
 Delete that directory to reset the sidecar completely.
 
+### Two sidecar addresses
+
+The backend and the browser reach the sidecar differently, so the client
+keeps two base URLs:
+
+- `PRESENTON_BASE_URL` — backend → sidecar API address. Inside the compose
+  network this is the service name (`http://presenton:80`); on the host it is
+  the published port (`http://localhost:5001`).
+- `PRESENTON_BROWSER_BASE_URL` — browser → sidecar origin used for the editor
+  and export card URLs. It must be reachable from the user's browser (the
+  published loopback port), never the compose service hostname. Defaults to
+  `PRESENTON_BASE_URL` when unset (fine when both run on the host).
+
+Using the API address for card URLs would hand the browser a hostname it
+cannot resolve; the split keeps generation working while the card actions
+stay usable.
+
 Resource notes: the image is ~3.7 GB (it bundles Chromium for export and
 embedding models). Generation runs a full LLM outline + per-slide content
 pipeline; on a laptop expect tens of seconds to a few minutes per deck
