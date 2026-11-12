@@ -58,6 +58,10 @@ What makes it not-too-intensive:
 
 ## 3. The one real wrinkle: embedding the editor (self-hosted auth)
 
+> **Update 2026-11-12 (source + issue research).** The v3 question now has a definitive
+> answer, and a no-new-tab embedding path exists that does not depend on v3. See 3.1
+> and 3.2; the option list below is superseded by 3.2 for the POC.
+
 Presenton's clean embedded-editor flow - a **scoped, expiring, per-presentation iframe
 token** (`POST /api/v3/presentation/integrate`, scopes `presentation:read/edit/export`)
 - is **Cloud API v3 only**. The self-hosted v1 surface does not expose it.
@@ -89,6 +93,67 @@ Presenton, confirms the API-key loop end to end with curl, and probes whether th
 self-hosted editor can be framed/opened with an acceptable local auth story. That
 result sets the embedding approach for PR 3 and the go/no-go for the whole sidecar.
 
+### 3.1 Why self-hosted is v1, and whether parity is coming (researched 2026-11-12)
+
+- **v3 is intentionally closed, not lagging packaging.** Issue
+  [presenton/presenton#391](https://github.com/presenton/presenton/issues/391)
+  ("v3 API endpoints not included in Docker image", Jan-May 2026): maintainer
+  ShivaRajBadu confirmed the v3 code is "intentionally not part of the open-source
+  distribution at this time": model variability across self-hosted environments
+  makes it unreliable, so they will not ship it in Docker until it behaves
+  consistently. Docs were updated to say "If you're using open-source, use v1
+  APIs. v3 APIs are not yet available on open-source."
+- **No timeline, ever.** Two users asked for an ETA in that issue (Feb and May 2026);
+  neither got one. The issue was closed with the doc clarification, not a commitment.
+- **Verified in current source (Nov 2026, v0.9.12-beta era):** `servers/fastapi/api/`
+  contains only `v1/` and `v2/`. Zero v3 route code. The only v3 touchpoints are
+  *outbound client calls* to Presenton Cloud (community gallery
+  `api.presenton.ai/api/v3/community/...`, and an optional cloud-provider proxy).
+- **Self-hosted is catching up incrementally, under v1/v2, not via a v3 drop.** A v2
+  router already exists in the OSS image (`/api/v2/ppt/...`, "Smart" adaptive-layout
+  generation, sync + async). Recent releases keep adding self-hosted capability:
+  air-gapped deployment support (v0.9.11), AI slide-edit template fixes and a
+  `/status/{id}` fix (v0.9.12), MCP single-slide editing requested (#1022, open).
+  The stated reason for withholding v3 (Smart-mode reliability across models) is
+  being addressed in OSS as v2 - so expect continued v1/v2 growth, with the
+  cloud-only surface (integrate tokens, cloud workspaces) staying commercial.
+- **Roadmap caveat:** the README points to a public GitHub Projects board
+  (orgs/presenton/projects/2); it could not be read with available credentials
+  (`read:project` scope) and does not render anonymously. Nothing in issues,
+  releases, or docs announces v3 parity. If Luis wants certainty, asking on #391 or
+  the project's Discord is the direct route; the evidence-based planning assumption
+  is **no v3 in self-hosted for the foreseeable future**.
+
+### 3.2 No-new-tab embedding without v3 (source-verified)
+
+The editor does not need v3 tokens to be framed:
+
+- **No framing restrictions exist.** Repo-wide search: no `X-Frame-Options`, no
+  `frame-ancestors` CSP anywhere (nginx.conf, next.config.mjs headers() only sets
+  font CORS). The editor page `/presentation?id=<uuid>` takes only the id
+  (`servers/nextjs/app/(presentation-generator)/presentation/page.tsx`).
+- **Session auth is a cookie, and localhost is same-site.** Conversations
+  (`localhost:3000`) framing Presenton (`localhost:5001`) is cross-origin but
+  same-site (scheme + registrable domain "localhost"), so a `SameSite=Lax` session
+  cookie is sent on the iframe load. One login to Presenton in the same browser
+  covers the iframe; no per-deck token needed for a single-user POC.
+- **`DISABLE_AUTH=true` is a supported single-user runtime.** Both the FastAPI
+  `SessionAuthMiddleware` and the Next.js server auth (`serverAuth.ts`) short-circuit
+  to an admin principal when it is set (this is how the Electron app runs). The
+  browser-side `window.env.DISABLE_AUTH` is only injected by Electron, but the
+  server-side paths are what gate the routes, so the editor loads without a login
+  screen. **Caveat: it disables auth for the API too** - acceptable only while the
+  sidecar is bound to loopback / the compose network, never exposed.
+- **Multi-user later:** Presenton accounts are admin-managed local users, not OIDC;
+  per-user SSO would be custom work. Out of POC scope.
+
+**Revised POC default:** iframe the editor inside Conversations, Presenton running
+with `DISABLE_AUTH=true` on a loopback-bound port (simplest), or with one shared
+login (keeps API-key auth intact). PR 1 verifies both empirically - including cookie
+behavior in the target browsers - instead of treating embedding as an open risk.
+Security note: pin >= v0.9.12-beta (CSRF fix CVE-2026-122151; the Oct 2026 security
+issues #972/#974/#975 were fixed in that line).
+
 ## 4. Architecture
 
 ```text
@@ -100,7 +165,7 @@ Conversations backend ──(API key, server-side)──► Presenton /api/v1
    │   stores mapping conversation ↔ presentation_id (+ version lineage)
    │   returns tool metadata {presentation_id, edit_url, export_url}
    ▼
-Deck card in chat ──► open editor (new tab or iframe, per PR 1)
+Deck card in chat ──► open editor in an in-app iframe (per 3.2; PR 1 verifies)
    │                      │ manual canvas edits happen in Presenton
    │   comments stored in Conversations, anchored to slide index (+field)
    ▼
@@ -170,7 +235,7 @@ Scope:
   `{presentation_id, edit_url, export_url, slide_count}`.
 - Frontend deck card in `ToolInvocationItem.tsx` reading that metadata (the
   `TableChart` precedent): title, slide count, **Open editor**, **Download PPTX**.
-- Editor opens per the PR 1 decision (new tab default).
+- Editor opens in an in-app iframe per 3.2 (PR 1 verifies the auth/cookie path).
 
 Acceptance: from chat, a deck is generated, the card renders, the editor opens, the
 PPTX downloads. Tool test follows `test_presentation_tool.py` fixtures.
@@ -225,10 +290,10 @@ legitimate minimal POC and PR 4-6 can follow.
 
 ## 7. Risks
 
-1. **Self-hosted editor auth (the spike).** Cloud-only scoped tokens mean the in-app
-   editor needs a shared local login or an nginx same-origin trick. Fine for a
-   localhost POC; a real multi-user deployment would need SSO work. This is the
-   go/no-go item, resolved in PR 1.
+1. **Self-hosted editor auth (the spike).** Cloud-only scoped tokens are not needed:
+   3.2 shows a same-site iframe with `DISABLE_AUTH=true` (loopback-only) or one shared
+   login works without v3. Fine for a localhost POC; a real multi-user deployment
+   would need SSO work. PR 1 verifies the cookie/auth behavior in target browsers.
 2. **Two design systems.** Presenton decks use its HTML/Tailwind templates, not the
    Marianne PPTX template the native pipeline uses. If la suite branding is a hard
    requirement, Presenton templates must be rebuilt to match (it supports custom
