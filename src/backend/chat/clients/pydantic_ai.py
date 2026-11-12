@@ -306,9 +306,7 @@ class AIAgentService:  # pylint: disable=too-many-instance-attributes
         self._is_presentation_generation_enabled = is_feature_enabled(
             self.user, "presentation_generation"
         )
-        self._is_presenton_sidecar_enabled = is_feature_enabled(
-            self.user, "presenton_sidecar"
-        )
+        self._is_presenton_sidecar_enabled = is_feature_enabled(self.user, "presenton_sidecar")
         self._is_smart_search_enabled = user.allow_smart_web_search
         self._datagouv = DataGouvConnector.for_user(self.user, conversation.pk)
         self._fake_streaming_delay = settings.FAKE_STREAMING_DELAY

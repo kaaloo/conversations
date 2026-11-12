@@ -5,6 +5,8 @@ metadata, so a generated deck's card appeared on reload but never in the
 active chat.
 """
 
+# pylint: disable=protected-access
+
 from unittest.mock import MagicMock
 
 from pydantic_ai.messages import FunctionToolResultEvent, ToolReturnPart
