@@ -34,7 +34,13 @@ cp env.d/development/presenton.dist env.d/development/presenton
 set -a; . env.d/development/presenton; set +a
 docker compose -f compose.yml -f compose.presenton.yml up -d presenton
 
-# 3. Wait for health, then open http://localhost:5001 (no login in POC mode).
+# 3. To use the feature from the assistant, start the backend with the same
+#    overlay: it injects PRESENTON_BASE_URL / PRESENTON_BROWSER_BASE_URL and
+#    enables the presenton_sidecar flag in app-dev. Without this the backend
+#    sees no sidecar address and generation fails as unconfigured.
+docker compose -f compose.yml -f compose.presenton.yml up -d app-dev
+
+# 4. Wait for health, then open http://localhost:5001 (no login in POC mode).
 docker compose -f compose.yml -f compose.presenton.yml ps presenton
 ```
 
