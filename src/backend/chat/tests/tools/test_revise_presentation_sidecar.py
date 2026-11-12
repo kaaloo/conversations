@@ -218,7 +218,7 @@ async def test_rework_defaults_to_latest_deck(ctx, link, mock_client):
 
 
 @pytest.mark.asyncio
-async def test_rework_no_deck_soft_fails(ctx, mock_client):
+async def test_rework_no_deck_soft_fails(ctx, mock_client):  # pylint: disable=unused-argument
     """With no deck in the conversation, the tool soft-fails with guidance."""
     result = await revise_presentation_sidecar(ctx)
     assert isinstance(result, str)
