@@ -61,6 +61,23 @@ def _build_prompt(comment: PresentationComment, instruction: str) -> str:
     return "\n".join(parts)
 
 
+async def _snapshot_quietly(
+    client: PresentonClient, link: ChatPresentationLink, resolved_ids: list
+) -> None:
+    """Record a rework version if any edit landed; never raise.
+
+    Called on both the success and failure paths so committed edits are
+    captured in history even when a later comment's edit fails.
+    """
+    if not resolved_ids:
+        return
+    try:
+        revised_deck = await client.get_presentation(str(link.presentation_id))
+        await record_version(link, revised_deck, "rework")
+    except PresentonError as exc:
+        logger.warning("presenton_rework_snapshot_failed", **safe_error_fields(exc))
+
+
 @last_model_retry_soft_fail
 async def revise_presentation_sidecar(
     ctx: RunContext, presentation_id: str = "", instruction: str = ""
@@ -119,6 +136,10 @@ async def revise_presentation_sidecar(
             edited = await client.edit_slide_ai(str(slide["id"]), prompt)
         except PresentonError as exc:
             logger.warning("presenton_rework_edit_failed", **safe_error_fields(exc))
+            # Earlier edits are already committed by Presenton; snapshot them
+            # so history reflects the partial rework instead of labelling the
+            # older state as current.
+            await _snapshot_quietly(client, link, resolved_ids)
             raise ModelRetry("A slide could not be revised. Try again.") from exc
         # Presenton assigns a new UUID on every successful edit and returns the
         # updated slide; track it so a second comment on the same slide targets
@@ -133,12 +154,7 @@ async def revise_presentation_sidecar(
         edited_slides.add(comment.slide_index)
 
     # Snapshot the revised deck so the version history reflects the rework.
-    if resolved_ids:
-        try:
-            revised_deck = await client.get_presentation(str(link.presentation_id))
-            await record_version(link, revised_deck, "rework")
-        except PresentonError as exc:
-            logger.warning("presenton_rework_snapshot_failed", **safe_error_fields(exc))
+    await _snapshot_quietly(client, link, resolved_ids)
 
     # Re-export so the card's download link reflects the revised deck.
     download_url = None

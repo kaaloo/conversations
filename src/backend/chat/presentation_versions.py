@@ -25,6 +25,10 @@ def _snapshot_slides(deck: dict) -> list:
 def record_version(link: ChatPresentationLink, deck: dict, source: str) -> PresentationVersion:
     """Append a new version snapshot for the deck, numbered sequentially."""
     with transaction.atomic():
+        # Lock the parent deck row so concurrent recordings serialize their
+        # read of the current maximum; otherwise two transactions could pick
+        # the same next number and one would hit the unique constraint.
+        ChatPresentationLink.objects.select_for_update().get(pk=link.pk)
         next_number = (
             PresentationVersion.objects.filter(link=link).aggregate(Max("number"))["number__max"]
             or 0

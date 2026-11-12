@@ -69,13 +69,17 @@ def test_restore_version(auth_client, conversation, link):
     with patch("chat.views.presentation_versions.PresentonClient") as mock_cls:
         client = mock_cls.return_value
         client.edit_presentation = AsyncMock(return_value={"path": "/x.pptx"})
-        client.get_presentation = AsyncMock(return_value=DECK)
+        # Live deck matches the snapshot (one slide), so no merge note.
+        client.get_presentation = AsyncMock(
+            return_value={"slides": [{"index": 0, "content": {"title": "Old"}}]}
+        )
         url = _versions_url(conversation, link) + f"{version.number}/restore/"
         response = auth_client.post(url)
 
     assert response.status_code == status.HTTP_201_CREATED
     assert response.json()["number"] == 2
     assert response.json()["source"] == "restore"
+    assert "note" not in response.json()
     client.edit_presentation.assert_awaited_once()
     assert PresentationVersion.objects.filter(link=link, number=2).exists()
 
@@ -85,10 +89,33 @@ def test_restore_sidecar_failure(auth_client, conversation, link):
     version = PresentationVersionFactory(link=link, number=1, slides=[], slide_count=0)
     with patch("chat.views.presentation_versions.PresentonClient") as mock_cls:
         client = mock_cls.return_value
+        client.get_presentation = AsyncMock(return_value={"slides": []})
         client.edit_presentation = AsyncMock(side_effect=PresentonError("boom"))
         url = _versions_url(conversation, link) + f"{version.number}/restore/"
         response = auth_client.post(url)
     assert response.status_code == status.HTTP_502_BAD_GATEWAY
+
+
+def test_restore_notes_extra_slides(auth_client, conversation, link):
+    """When the live deck has slides the snapshot lacks, the response notes it.
+
+    The sidecar's v1 edit deep-merges and cannot remove slides, so restore is a
+    merge, not a byte-for-byte rollback; the caller must be told.
+    """
+    version = PresentationVersionFactory(
+        link=link,
+        number=1,
+        slides=[{"index": 0, "content": {"title": "Old"}}],
+        slide_count=1,
+    )
+    with patch("chat.views.presentation_versions.PresentonClient") as mock_cls:
+        client = mock_cls.return_value
+        client.edit_presentation = AsyncMock(return_value={"path": "/x.pptx"})
+        client.get_presentation = AsyncMock(return_value=DECK)  # slides 0 and 1
+        url = _versions_url(conversation, link) + f"{version.number}/restore/"
+        response = auth_client.post(url)
+    assert response.status_code == status.HTTP_201_CREATED
+    assert "note" in response.json()
 
 
 def test_export(auth_client, conversation, link):

@@ -18,7 +18,7 @@ from chat.factories import (
     ChatPresentationLinkFactory,
     PresentationCommentFactory,
 )
-from chat.models import PresentationComment
+from chat.models import PresentationComment, PresentationVersion
 from chat.presenton_client import PresentonError
 from chat.tools.revise_presentation_sidecar import revise_presentation_sidecar
 
@@ -183,9 +183,7 @@ async def test_rework_persists_completed_comments_on_later_failure(ctx, link, mo
     """
     link.presentation_id = "11111111-1111-1111-1111-111111111111"
     await sync_to_async(link.save)()
-    first = await sync_to_async(PresentationCommentFactory)(
-        link=link, slide_index=0, body="first"
-    )
+    first = await sync_to_async(PresentationCommentFactory)(link=link, slide_index=0, body="first")
     second = await sync_to_async(PresentationCommentFactory)(
         link=link, slide_index=1, body="second"
     )
@@ -200,6 +198,29 @@ async def test_rework_persists_completed_comments_on_later_failure(ctx, link, mo
     second_refreshed = await sync_to_async(PresentationComment.objects.get)(pk=second.pk)
     assert first_refreshed.resolved is True
     assert second_refreshed.resolved is False
+
+
+@pytest.mark.asyncio
+async def test_rework_snapshots_committed_edits_on_later_failure(ctx, link, mock_client):
+    """A partial rework still records a version for the committed edits.
+
+    Otherwise history would keep labelling the older snapshot as current and
+    the partial rework could not be recovered.
+    """
+    link.presentation_id = "11111111-1111-1111-1111-111111111111"
+    await sync_to_async(link.save)()
+    await sync_to_async(PresentationCommentFactory)(link=link, slide_index=0, body="first")
+    await sync_to_async(PresentationCommentFactory)(link=link, slide_index=1, body="second")
+    mock_client.edit_slide_ai = AsyncMock(
+        side_effect=[{"id": "slide-0-new", "index": 0}, PresentonError("boom")]
+    )
+
+    with pytest.raises(ModelRetry):
+        await revise_presentation_sidecar(ctx, "11111111-1111-1111-1111-111111111111")
+
+    versions = await sync_to_async(list)(PresentationVersion.objects.filter(link=link))
+    assert len(versions) == 1
+    assert versions[0].source == "rework"
 
 
 @pytest.mark.asyncio

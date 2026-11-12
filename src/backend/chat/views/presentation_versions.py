@@ -46,7 +46,14 @@ class PresentationVersionsMixin:
         url_name="presentation-version-restore",
     )
     def presentation_version_restore(self, request, pk, link_id=None, number=None):
-        """Restore a version by re-applying its content to the live deck."""
+        """Restore a version by re-applying its content to the live deck.
+
+        The sidecar's v1 edit endpoint deep-merges slide content and has no
+        replacement operation, so restore reverts the content of the slides
+        present in the snapshot but cannot remove slides or content keys that
+        were added after it. The response flags that case so the caller knows
+        the result is a merge, not a byte-for-byte rollback.
+        """
         link = self._get_deck_link(request, pk, link_id)
         version = get_object_or_404(models.PresentationVersion, link=link, number=number)
 
@@ -57,6 +64,10 @@ class PresentationVersionsMixin:
             if s.get("index") is not None
         ]
         try:
+            live_deck = async_to_sync(client.get_presentation)(str(link.presentation_id))
+            live_indices = {s.get("index") for s in live_deck.get("slides", [])}
+            snapshot_indices = {s["index"] for s in slides}
+            extra_slides = sorted(live_indices - snapshot_indices)
             async_to_sync(client.edit_presentation)(
                 str(link.presentation_id), slides, export_as="pptx"
             )
@@ -74,11 +85,14 @@ class PresentationVersionsMixin:
             link_id=str(link.pk),
             restored_from=version.number,
             new_version=new_version.number,
+            extra_slides=extra_slides,
         )
-        return Response(
-            serializers.PresentationVersionReadSerializer(new_version).data,
-            status=status.HTTP_201_CREATED,
-        )
+        data = serializers.PresentationVersionReadSerializer(new_version).data
+        if extra_slides:
+            data["note"] = (
+                "The sidecar merges content on restore; slides added after this version were kept."
+            )
+        return Response(data, status=status.HTTP_201_CREATED)
 
     @decorators.action(
         methods=["get"],

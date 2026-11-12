@@ -7,6 +7,8 @@ export interface PresentationVersion {
   source: 'generated' | 'rework' | 'restore';
   slide_count: number;
   created_at: string;
+  /** Set on a restore when the sidecar kept slides added after the snapshot. */
+  note?: string;
 }
 
 const versionsUrl = (conversationId: string, linkId: string) =>

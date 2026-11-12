@@ -27,6 +27,7 @@ export const PresentationVersions = ({
   const [versions, setVersions] = useState<PresentationVersion[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     try {
@@ -43,8 +44,16 @@ export const PresentationVersions = ({
   const restore = async (number: number) => {
     setBusy(true);
     setError(null);
+    setNote(null);
     try {
-      await restorePresentationVersion(conversationId, linkId, number);
+      const restored = await restorePresentationVersion(
+        conversationId,
+        linkId,
+        number,
+      );
+      if (restored.note) {
+        setNote(restored.note);
+      }
       await reload();
     } catch {
       setError(t('Could not restore this version.'));
@@ -103,6 +112,12 @@ export const PresentationVersions = ({
       {error && (
         <Text $theme="danger" $size="sm">
           {error}
+        </Text>
+      )}
+
+      {note && (
+        <Text $theme="neutral" $variation="secondary" $size="sm">
+          {note}
         </Text>
       )}
     </Box>
