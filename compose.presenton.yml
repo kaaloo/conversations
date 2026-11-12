@@ -22,7 +22,8 @@ services:
   # network where the backend reaches the sidecar by service name.
   app-dev:
     environment:
-      - FEATURE_FLAG_PRESENTON_SIDECAR=${FEATURE_FLAG_PRESENTON_SIDECAR:-enabled}
+      # FeatureToggle[...] resolves by enum member NAME (uppercase), not value.
+      - FEATURE_FLAG_PRESENTON_SIDECAR=${FEATURE_FLAG_PRESENTON_SIDECAR:-ENABLED}
       - PRESENTON_BASE_URL=${PRESENTON_BASE_URL:-http://presenton:80}
       - PRESENTON_BROWSER_BASE_URL=${PRESENTON_BROWSER_BASE_URL:-http://localhost:5001}
       - PRESENTON_API_KEY=${PRESENTON_API_KEY:-}
