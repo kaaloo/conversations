@@ -17,16 +17,19 @@ pytestmark = pytest.mark.django_db
 
 @pytest.fixture(name="conversation")
 def conversation_fixture():
+    """A conversation owned by a fresh user."""
     return ChatConversationFactory()
 
 
 @pytest.fixture(name="link")
 def link_fixture(conversation):
+    """A deck link belonging to the conversation."""
     return ChatPresentationLinkFactory(conversation=conversation)
 
 
 @pytest.fixture(name="auth_client")
 def auth_client_fixture(api_client, conversation):
+    """An API client logged in as the conversation's owner."""
     api_client.force_login(conversation.owner)
     return api_client
 

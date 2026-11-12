@@ -381,4 +381,25 @@ describe('ToolInvocationItem', () => {
       expect(container).toBeEmptyDOMElement();
     });
   });
+
+  describe('revise_presentation_sidecar', () => {
+    it('renders the refreshed deck card after a revision', () => {
+      render(
+        <ToolInvocationItem
+          toolInvocation={{
+            type: 'tool-revise_presentation_sidecar',
+            toolCallId: 'test-id',
+            state: 'output-available',
+            input: {},
+            output: { presentation: PRESENTATION },
+          }}
+        />,
+      );
+
+      expect(screen.getByText('Sobriété énergétique')).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'Edit slides' }),
+      ).toBeInTheDocument();
+    });
+  });
 });

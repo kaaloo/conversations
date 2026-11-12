@@ -78,7 +78,10 @@ export const ToolInvocationItem: React.FC<ToolInvocationItemProps> = ({
     return chart ? <TableChart chart={chart} /> : null;
   }
 
-  if (toolName === 'generate_presentation_sidecar') {
+  if (
+    toolName === 'generate_presentation_sidecar' ||
+    toolName === 'revise_presentation_sidecar'
+  ) {
     if (toolInvocation.state !== 'output-available') {
       return null;
     }

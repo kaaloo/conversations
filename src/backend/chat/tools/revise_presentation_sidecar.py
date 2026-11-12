@@ -101,10 +101,15 @@ async def revise_presentation_sidecar(
             continue
         prompt = _build_prompt(comment, instruction)
         try:
-            await client.edit_slide_ai(str(slide["id"]), prompt)
+            edited = await client.edit_slide_ai(str(slide["id"]), prompt)
         except PresentonError as exc:
             logger.warning("presenton_rework_edit_failed", **safe_error_fields(exc))
             raise ModelRetry("A slide could not be revised. Try again.") from exc
+        # Presenton assigns a new UUID on every successful edit and returns the
+        # updated slide; track it so a second comment on the same slide targets
+        # the current id instead of the stale one (which would 404).
+        if isinstance(edited, dict) and edited.get("id"):
+            by_index[comment.slide_index] = edited
         resolved_ids.append(comment.pk)
         edited_slides.add(comment.slide_index)
 

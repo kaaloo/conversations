@@ -143,3 +143,30 @@ async def test_rework_missing_slide_skipped(ctx, link, mock_client):
     mock_client.edit_slide_ai.assert_not_awaited()
     refreshed = await sync_to_async(PresentationComment.objects.get)(pk=comment.pk)
     assert refreshed.resolved is False
+
+
+@pytest.mark.asyncio
+async def test_rework_tracks_replacement_slide_id(ctx, link, mock_client):
+    """Two comments on one slide use the replacement id after the first edit.
+
+    Presenton assigns a new UUID on every successful edit; reusing the stale
+    id for the second comment would 404.
+    """
+    link.presentation_id = "11111111-1111-1111-1111-111111111111"
+    await sync_to_async(link.save)()
+    await sync_to_async(PresentationCommentFactory)(link=link, slide_index=1, body="first")
+    await sync_to_async(PresentationCommentFactory)(link=link, slide_index=1, body="second")
+    # The first edit returns a replacement slide with a new id.
+    mock_client.edit_slide_ai = AsyncMock(
+        side_effect=[
+            {"id": "slide-1-new", "index": 1, "content": {}},
+            {"id": "slide-1-newer", "index": 1, "content": {}},
+        ]
+    )
+
+    await revise_presentation_sidecar(ctx, "11111111-1111-1111-1111-111111111111")
+
+    calls = mock_client.edit_slide_ai.await_args_list
+    assert len(calls) == 2
+    assert calls[0].args[0] == "slide-1"
+    assert calls[1].args[0] == "slide-1-new"
