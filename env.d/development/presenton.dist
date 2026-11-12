@@ -21,3 +21,12 @@ PRESENTON_HOST_PORT=5001
 
 # Base URL the spike script and the backend client use.
 PRESENTON_URL=http://localhost:5001
+
+# Backend -> sidecar API address. Inside the compose network the backend
+# reaches the service by name; on the host it is the published port.
+PRESENTON_BASE_URL=http://presenton:80
+
+# Browser -> sidecar origin for the editor/export card URLs. This must be
+# reachable from the user's browser (the published loopback port), NOT the
+# compose service hostname. Defaults to PRESENTON_BASE_URL when unset.
+PRESENTON_BROWSER_BASE_URL=http://localhost:5001

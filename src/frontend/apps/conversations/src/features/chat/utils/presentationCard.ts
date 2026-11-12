@@ -15,7 +15,9 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const isShortString = (value: unknown): value is string =>
-  typeof value === 'string' && value.length > 0 && value.length <= MAX_TEXT_LENGTH;
+  typeof value === 'string' &&
+  value.length > 0 &&
+  value.length <= MAX_TEXT_LENGTH;
 
 /** Only http(s) URLs are accepted; the card renders them in links/iframes. */
 const isHttpUrl = (value: unknown): value is string =>

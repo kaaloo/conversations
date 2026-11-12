@@ -65,7 +65,10 @@ const PRESENTATION = {
   download_url: 'http://localhost:5001/app_data/exports/deck.pptx',
 };
 
-const renderSidecarPresentation = (output: unknown, state = 'output-available') =>
+const renderSidecarPresentation = (
+  output: unknown,
+  state = 'output-available',
+) =>
   render(
     <ToolInvocationItem
       toolInvocation={{
@@ -324,7 +327,9 @@ describe('ToolInvocationItem', () => {
 
       expect(screen.queryByTitle(/Slide editor/)).not.toBeInTheDocument();
 
-      await userEvent.click(screen.getByRole('button', { name: 'Edit slides' }));
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Edit slides' }),
+      );
 
       const frame = screen.getByTitle(/Slide editor/);
       expect(frame.tagName).toBe('IFRAME');
@@ -335,8 +340,12 @@ describe('ToolInvocationItem', () => {
     it('closes the editor again', async () => {
       renderSidecarPresentation({ presentation: PRESENTATION });
 
-      await userEvent.click(screen.getByRole('button', { name: 'Edit slides' }));
-      await userEvent.click(screen.getByRole('button', { name: 'Close editor' }));
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Edit slides' }),
+      );
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Close editor' }),
+      );
 
       expect(screen.queryByTitle(/Slide editor/)).not.toBeInTheDocument();
     });

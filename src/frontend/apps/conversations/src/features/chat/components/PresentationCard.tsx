@@ -46,7 +46,7 @@ export const PresentationCard = ({
       <Box $direction="row" $gap="8px" $wrap="wrap">
         <Button
           size="small"
-          color="primary"
+          color="brand"
           variant={editorOpen ? 'secondary' : 'primary'}
           aria-expanded={editorOpen}
           onClick={() => setEditorOpen((open) => !open)}
@@ -65,7 +65,6 @@ export const PresentationCard = ({
             size="small"
             color="neutral"
             variant="secondary"
-            as="a"
             href={presentation.downloadUrl}
             download
             icon={<Icon iconName="download" $theme="inherit" $size="sm" />}

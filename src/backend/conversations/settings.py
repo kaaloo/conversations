@@ -975,6 +975,12 @@ class Base(
     # calls only; it must never reach the browser. Leave PRESENTON_BASE_URL
     # unset to keep the integration inert even if the feature flag is on.
     PRESENTON_BASE_URL = values.Value(None, environ_name="PRESENTON_BASE_URL", environ_prefix=None)
+    # Browser-facing sidecar origin for the editor/export card URLs. The
+    # backend talks to PRESENTON_BASE_URL over the compose network; the
+    # browser needs the published host port. Defaults to PRESENTON_BASE_URL.
+    PRESENTON_BROWSER_BASE_URL = values.Value(
+        None, environ_name="PRESENTON_BROWSER_BASE_URL", environ_prefix=None
+    )
     PRESENTON_API_KEY = values.Value(None, environ_name="PRESENTON_API_KEY", environ_prefix=None)
     PRESENTON_API_TIMEOUT = values.PositiveIntegerValue(
         default=120, environ_name="PRESENTON_API_TIMEOUT", environ_prefix=None
