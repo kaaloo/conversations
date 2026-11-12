@@ -173,6 +173,7 @@ from chat.tools.descriptions import (
     DOCUMENT_SUMMARIZE_PROJECT_TOOL_DESCRIPTION,
     DOCUMENT_SUMMARIZE_SYSTEM_PROMPT,
     DOCUMENT_SUMMARIZE_TOOL_DESCRIPTION,
+    GENERATE_PRESENTATION_SIDECAR_TOOL_DESCRIPTION,
     GENERATE_PRESENTATION_TOOL_DESCRIPTION,
     QUERY_TABLE_TOOL_DESCRIPTION,
     SELF_DOCUMENTATION_SYSTEM_PROMPT,
@@ -184,6 +185,7 @@ from chat.tools.document_generic_search_rag import add_document_rag_search_tool_
 from chat.tools.document_search_rag import add_document_rag_search_tool
 from chat.tools.document_summarize import document_summarize, document_summarize_project
 from chat.tools.generate_presentation import generate_presentation
+from chat.tools.generate_presentation_sidecar import generate_presentation_sidecar
 from chat.tools.self_documentation import build_self_documentation_payload
 from chat.tools.tabular import describe_tables, query_table
 from chat.tools.utils import soft_fail_last_invalid_tool_call
@@ -304,6 +306,9 @@ class AIAgentService:  # pylint: disable=too-many-instance-attributes
         self._is_presentation_generation_enabled = is_feature_enabled(
             self.user, "presentation_generation"
         )
+        self._is_presenton_sidecar_enabled = is_feature_enabled(
+            self.user, "presenton_sidecar"
+        )
         self._is_smart_search_enabled = user.allow_smart_web_search
         self._datagouv = DataGouvConnector.for_user(self.user, conversation.pk)
         self._fake_streaming_delay = settings.FAKE_STREAMING_DELAY
@@ -321,6 +326,7 @@ class AIAgentService:  # pylint: disable=too-many-instance-attributes
         self._history_summary = conversation.history_summary.strip() or None
         self._history_summary_checkpoint = max(conversation.history_summary_checkpoint, 0)
         self._presentation_tool_registered = False
+        self._presenton_sidecar_tool_registered = False
 
         _capabilities: list = [ProcessHistory(safe_clean_tool_history)]
         if self._langfuse_available:
@@ -1272,6 +1278,25 @@ class AIAgentService:  # pylint: disable=too-many-instance-attributes
 
         self._presentation_tool_registered = True
 
+    def _setup_presenton_sidecar_tool(self) -> None:
+        """Register the sidecar deck generation tool when the feature is enabled."""
+        if self._presenton_sidecar_tool_registered or not self._is_presenton_sidecar_enabled:
+            return
+
+        @self.conversation_agent.tool(
+            name="generate_presentation_sidecar",
+            retries=1,
+            description=GENERATE_PRESENTATION_SIDECAR_TOOL_DESCRIPTION,
+        )
+        @functools.wraps(generate_presentation_sidecar)
+        async def generate_presentation_sidecar_tool(
+            ctx: RunContext, *args, **kwargs
+        ) -> ToolReturn:
+            """Wrap the sidecar generation tool to provide context and add the tool."""
+            return await generate_presentation_sidecar(ctx, *args, **kwargs)
+
+        self._presenton_sidecar_tool_registered = True
+
     def _setup_calculator_tool(self) -> None:
         """Register the arithmetic tool so the model never computes in its head."""
         if self._calculator_tool_registered:
@@ -1553,6 +1578,7 @@ class AIAgentService:  # pylint: disable=too-many-instance-attributes
         self._setup_self_documentation_tool()
         self._setup_calculator_tool()
         self._setup_presentation_tool()
+        self._setup_presenton_sidecar_tool()
         self._setup_web_search_tool()
         self._setup_web_search(force_web_search)
 

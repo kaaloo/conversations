@@ -106,6 +106,32 @@ Examples that must NOT trigger this tool:
 - "Comment structurer une bonne présentation ?"
 """
 
+GENERATE_PRESENTATION_SIDECAR_TOOL_DESCRIPTION = """
+Generate an editable slide deck and open it in the chat as a deck card.
+
+Use this tool whenever the user asks for a presentation, a deck, slides, or a
+support to project in a meeting. The tool writes the slides itself: pass a
+brief describing the subject, the audience and any structure the user asked
+for, not the slides themselves.
+
+The deck opens inline in an editor where the user can refine it and download
+it. Tell the user the deck is ready to edit; do NOT restate the deck's content
+or list the slides.
+
+Do NOT use this tool to:
+- Write a document, a report or a note (no slides involved)
+- Summarize an attached document (use the summarize tool)
+- Answer a question about presentations in general
+
+Examples that MUST trigger this tool:
+- "Fais-moi une présentation sur la sobriété énergétique"
+- "Prépare un support de 10 slides pour le comité de lundi"
+
+Examples that must NOT trigger this tool:
+- "Résume ce document"
+- "Comment structurer une bonne présentation ?"
+"""
+
 SELF_DOCUMENTATION_SYSTEM_PROMPT = (
     "For meta questions about THIS assistant itself (identity, model, "
     "capabilities, limitations, privacy, internet access, accepted files, "

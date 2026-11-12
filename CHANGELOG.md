@@ -10,6 +10,7 @@ and this project adheres to
 
 ### Added
 
+- ✨(poc) sidecar deck generation tool and in-chat editor card
 - ✨(back) Presenton sidecar client and deck-link model (POC)
 - 🧪(poc) Presenton sidecar compose overlay, runbook and API spike
 - ✨(front) draw spreadsheet query charts

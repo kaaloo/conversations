@@ -22,6 +22,7 @@ from chat.agents.conversation import TitleGenerationAgent
 from chat.ai_sdk_types import SourceUrlUIPart
 from chat.clients.pydantic_ui_message_converter import (
     attach_tool_charts,
+    attach_tool_presentations,
     merge_by_kind,
     model_message_to_ui_message,
 )
@@ -121,6 +122,7 @@ def prepare_update_conversation(  # noqa: PLR0913  # pylint: disable=too-many-ar
 
     _output_ui_message = model_message_to_ui_message(_merged_final_output_message)
     attach_tool_charts(_output_ui_message, _merged_final_output_request)
+    attach_tool_presentations(_output_ui_message, _merged_final_output_request)
     if ui_sources:
         _output_ui_message.parts += ui_sources
     if model_response_message_id:
