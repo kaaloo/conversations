@@ -10,6 +10,7 @@ and this project adheres to
 
 ### Added
 
+- ✨(poc) deck version history with restore and export
 - ✨(poc) slide comments and assistant rework for sidecar decks
 - ✨(poc) sidecar deck generation tool and in-chat editor card
 - ✨(back) Presenton sidecar client and deck-link model (POC)

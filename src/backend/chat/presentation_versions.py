@@ -5,9 +5,10 @@ These helpers snapshot the deck's slide content into a PresentationVersion
 row at generation, rework and restore time.
 """
 
-from asgiref.sync import sync_to_async
 from django.db import transaction
 from django.db.models import Max
+
+from asgiref.sync import sync_to_async
 
 from chat.models import ChatPresentationLink, PresentationVersion
 
@@ -21,15 +22,11 @@ def _snapshot_slides(deck: dict) -> list:
 
 
 @sync_to_async
-def record_version(
-    link: ChatPresentationLink, deck: dict, source: str
-) -> PresentationVersion:
+def record_version(link: ChatPresentationLink, deck: dict, source: str) -> PresentationVersion:
     """Append a new version snapshot for the deck, numbered sequentially."""
     with transaction.atomic():
         next_number = (
-            PresentationVersion.objects.filter(link=link).aggregate(Max("number"))[
-                "number__max"
-            ]
+            PresentationVersion.objects.filter(link=link).aggregate(Max("number"))["number__max"]
             or 0
         ) + 1
         slides = _snapshot_slides(deck)

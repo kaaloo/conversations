@@ -24,9 +24,7 @@ class PresentationVersionsMixin:
 
     def _get_deck_link(self, request, pk, link_id):  # pylint: disable=unused-argument
         conversation = self.get_object()
-        return get_object_or_404(
-            models.ChatPresentationLink, pk=link_id, conversation=conversation
-        )
+        return get_object_or_404(models.ChatPresentationLink, pk=link_id, conversation=conversation)
 
     @decorators.action(
         methods=["get"],
@@ -50,9 +48,7 @@ class PresentationVersionsMixin:
     def presentation_version_restore(self, request, pk, link_id=None, number=None):
         """Restore a version by re-applying its content to the live deck."""
         link = self._get_deck_link(request, pk, link_id)
-        version = get_object_or_404(
-            models.PresentationVersion, link=link, number=number
-        )
+        version = get_object_or_404(models.PresentationVersion, link=link, number=number)
 
         client = PresentonClient()
         slides = [
@@ -105,6 +101,4 @@ class PresentationVersionsMixin:
                 status=status.HTTP_502_BAD_GATEWAY,
             )
         path = result.get("path")
-        return Response(
-            {"download_url": client.export_url(path) if path else None}
-        )
+        return Response({"download_url": client.export_url(path) if path else None})

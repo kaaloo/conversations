@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Box, Icon, Text } from '@/components';
 import { PresentationComments } from '@/features/chat/components/PresentationComments';
+import { PresentationVersions } from '@/features/chat/components/PresentationVersions';
 import type { PresentationCardData } from '@/features/chat/utils/presentationCard';
 import { useConversationRouteId } from '@/utils/useConversationRouteId';
 
@@ -22,6 +23,7 @@ export const PresentationCard = ({
   const { t } = useTranslation();
   const [editorOpen, setEditorOpen] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
+  const [versionsOpen, setVersionsOpen] = useState(false);
   const conversationId = useConversationRouteId();
 
   return (
@@ -88,6 +90,18 @@ export const PresentationCard = ({
             {t('Comments')}
           </Button>
         )}
+        {conversationId && (
+          <Button
+            size="small"
+            color="neutral"
+            variant={versionsOpen ? 'secondary' : 'tertiary'}
+            aria-expanded={versionsOpen}
+            onClick={() => setVersionsOpen((open) => !open)}
+            icon={<Icon iconName="history" $theme="inherit" $size="sm" />}
+          >
+            {t('Versions')}
+          </Button>
+        )}
       </Box>
 
       {editorOpen && (
@@ -104,6 +118,13 @@ export const PresentationCard = ({
           conversationId={conversationId}
           linkId={presentation.linkId}
           slideCount={presentation.slideCount}
+        />
+      )}
+
+      {versionsOpen && conversationId && (
+        <PresentationVersions
+          conversationId={conversationId}
+          linkId={presentation.linkId}
         />
       )}
     </Box>
