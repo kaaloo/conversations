@@ -122,6 +122,30 @@ def attach_tool_charts(ui_message: UIMessage, request: ModelRequest) -> None:
             ui_part.output = {"chart": charts[ui_part.toolCallId]}
 
 
+def tool_presentation(part: ToolReturnPart) -> dict | None:
+    """The deck card a tool returned in its metadata (sidecar generation), if any."""
+    if isinstance(part.metadata, dict):
+        return part.metadata.get("presentation")
+    return None
+
+
+def attach_tool_presentations(ui_message: UIMessage, request: ModelRequest) -> None:
+    """Give the tool parts of `ui_message` the deck card their tool returned.
+
+    Same reload-survival rationale as ``attach_tool_charts``: the card metadata
+    lives in the tool return (request), not the response the UI is built from.
+    """
+    presentations = {
+        part.tool_call_id: presentation
+        for part in request.parts
+        if isinstance(part, ToolReturnPart) and (presentation := tool_presentation(part))
+    }
+    for ui_part in ui_message.parts:
+        if isinstance(ui_part, ToolUIPart) and ui_part.toolCallId in presentations:
+            ui_part.state = "output-available"
+            ui_part.output = {"presentation": presentations[ui_part.toolCallId]}
+
+
 def model_message_to_ui_message(model_message: ModelMessage) -> Optional[UIMessage]:
     """
     Convert a ModelMessage (ModelRequest or ModelResponse) to a UIMessage.
