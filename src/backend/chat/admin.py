@@ -336,3 +336,22 @@ class ChatProjectAdmin(admin.ModelAdmin):
         "created_at",
         "updated_at",
     )
+
+
+@admin.register(models.ChatPresentationLink)
+class ChatPresentationLinkAdmin(admin.ModelAdmin):
+    """Admin class for the ChatPresentationLink model (slides-loop POC)."""
+
+    search_fields = ("id", "presentation_id", "title")
+    ordering = ("-created_at",)
+    date_hierarchy = "created_at"
+    autocomplete_fields = ("conversation",)
+    list_select_related = ("conversation",)
+    list_display = (
+        "id",
+        "conversation",
+        "presentation_id",
+        "title",
+        "created_at",
+        "updated_at",
+    )

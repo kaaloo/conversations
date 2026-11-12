@@ -3,11 +3,13 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Box, Loader, Text } from '@/components';
+import { parsePresentationCard } from '@/features/chat/utils/presentationCard';
 import { parseTableChart } from '@/features/chat/utils/tableChart';
 
 import ChatBubblesIllustration from '../assets/chat-bubbles-illustration.svg?react';
 
 import { DocumentParsingErrorBox } from './DocumentParsingErrorBox';
+import { PresentationCard } from './PresentationCard';
 import { TableChart } from './TableChart';
 
 const ConversationResumeLoader = ({ t }: { t: (key: string) => string }) => {
@@ -74,6 +76,16 @@ export const ToolInvocationItem: React.FC<ToolInvocationItemProps> = ({
     }
     const chart = parseTableChart(toolInvocation.output);
     return chart ? <TableChart chart={chart} /> : null;
+  }
+
+  if (toolName === 'generate_presentation_sidecar') {
+    if (toolInvocation.state !== 'output-available') {
+      return null;
+    }
+    const presentation = parsePresentationCard(toolInvocation.output);
+    return presentation ? (
+      <PresentationCard presentation={presentation} />
+    ) : null;
   }
 
   if (toolName === 'document_parsing') {

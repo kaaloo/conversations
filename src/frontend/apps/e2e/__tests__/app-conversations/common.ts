@@ -10,6 +10,7 @@ export const CONFIG = {
     'datagouv-connector': 'disabled',
     'document-upload': 'enabled',
     'presentation-generation': 'disabled',
+    'presenton-sidecar': 'disabled',
     'web-search': 'enabled',
   },
   FILE_UPLOAD_MODE: 'presigned_url',

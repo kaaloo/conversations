@@ -1,0 +1,289 @@
+#!/usr/bin/env python3
+"""P1 integration spike for the Presenton sidecar (docs/presenton-sidecar.md).
+
+Exercises the self-hosted v1 loop end to end:
+
+    generate (async) -> poll status -> get -> edit -> derive -> export check
+
+and probes the editor page for framing restrictions (X-Frame-Options / CSP
+frame-ancestors). Stdlib only; run it with the sidecar already up:
+
+    PRESENTON_URL=http://localhost:5001 python3 bin/presenton-spike
+
+With DISABLE_AUTH=true no API key is needed. Otherwise set PRESENTON_API_KEY
+(Admin -> API keys in the Presenton UI); it is sent as a Bearer token.
+
+Exit code 0 means the whole loop passed. Artifacts (deck JSON, PPTX bytes,
+findings) are written to --out-dir (default /tmp/presenton-spike).
+"""
+
+import argparse
+import json
+import os
+import sys
+import time
+import urllib.error
+import urllib.request
+import zipfile
+from pathlib import Path
+
+API = "/api/v1/ppt"
+POLL_SECONDS = 5
+POLL_TIMEOUT = 600
+
+
+def log(msg):
+    # Log to stderr: the repo's lint-git gate bans the built-in stdout writer
+    # in committed code, so this CLI diagnostic uses stderr instead.
+    sys.stderr.write(f"[spike] {msg}\n")
+    sys.stderr.flush()
+
+
+class Client:
+    def __init__(self, base_url, api_key=None):
+        self.base = base_url.rstrip("/")
+        self.api_key = api_key
+
+    def request(self, method, path, body=None, timeout=120, raw=False):
+        url = self.base + path
+        data = json.dumps(body).encode() if body is not None else None
+        req = urllib.request.Request(url, data=data, method=method)
+        req.add_header("Accept", "application/json")
+        if data is not None:
+            req.add_header("Content-Type", "application/json")
+        if self.api_key:
+            req.add_header("Authorization", f"Bearer {self.api_key}")
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                payload = resp.read()
+                headers = dict(resp.headers)
+        except urllib.error.HTTPError as exc:
+            detail = exc.read().decode(errors="replace")[:500]
+            raise RuntimeError(f"{method} {path} -> HTTP {exc.code}: {detail}") from exc
+        if raw:
+            return payload, headers
+        return json.loads(payload) if payload else None
+
+    def get_bytes(self, path, timeout=120):
+        return self.request("GET", path, timeout=timeout, raw=True)
+
+
+def check_pptx(blob, label):
+    """A PPTX is a zip with [Content_Types].xml and ppt/presentation.xml."""
+    if not blob.startswith(b"PK"):
+        raise RuntimeError(f"{label}: not a zip/PPTX (first bytes: {blob[:16]!r})")
+    import io
+
+    with zipfile.ZipFile(io.BytesIO(blob)) as zf:
+        names = zf.namelist()
+        for required in ("[Content_Types].xml", "ppt/presentation.xml"):
+            if required not in names:
+                raise RuntimeError(f"{label}: missing {required} in PPTX")
+        slides = [n for n in names if n.startswith("ppt/slides/slide")]
+    log(f"{label}: valid PPTX, {len(slides)} slide parts, {len(blob)} bytes")
+    return len(slides)
+
+
+def probe_editor(client, presentation_id):
+    """Fetch the editor page and report framing headers."""
+    url = f"/presentation?id={presentation_id}"
+    blob, headers = client.get_bytes(url)
+    lowered = {k.lower(): v for k, v in headers.items()}
+    xfo = lowered.get("x-frame-options")
+    csp = lowered.get("content-security-policy", "")
+    frame_ancestors = [p for p in csp.split(";") if "frame-ancestors" in p]
+    findings = {
+        "url": client.base + url,
+        "status_bytes": len(blob),
+        "x_frame_options": xfo,
+        "csp_frame_ancestors": frame_ancestors or None,
+        "framable": xfo is None and not frame_ancestors,
+        "looks_like_editor": b"presentation" in blob.lower(),
+    }
+    log(f"editor probe: {json.dumps(findings)}")
+    return findings
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--out-dir", default="/tmp/presenton-spike")
+    parser.add_argument(
+        "--brief",
+        default=(
+            "A concise 4-slide introduction to la Suite numerique for civil "
+            "servants: what it is, the Docs and Meetings tools, data "
+            "sovereignty, and how to get started."
+        ),
+    )
+    args = parser.parse_args()
+
+    base_url = os.environ.get("PRESENTON_URL", "http://localhost:5001")
+    api_key = os.environ.get("PRESENTON_API_KEY") or None
+    out = Path(args.out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    client = Client(base_url, api_key)
+    findings = {"base_url": base_url, "auth": "api-key" if api_key else "disabled/none"}
+
+    log(f"target {base_url} (auth: {findings['auth']})")
+
+    # 1. Async generation.
+    task = client.request(
+        "POST",
+        f"{API}/presentation/generate/async",
+        {
+            "content": args.brief,
+            "n_slides": 4,
+            "language": "English",
+            "template": "general",
+            "export_as": "pptx",
+        },
+    )
+    task_id = task["id"]
+    log(f"generation task {task_id} started")
+
+    # 2. Poll status until terminal.
+    deadline = time.monotonic() + POLL_TIMEOUT
+    while True:
+        status = client.request("GET", f"{API}/presentation/status/{task_id}")
+        state = status.get("status")
+        if state == "completed":
+            break
+        if state == "error":
+            raise RuntimeError(f"generation failed: {json.dumps(status)[:800]}")
+        if time.monotonic() > deadline:
+            raise RuntimeError(f"generation timed out after {POLL_TIMEOUT}s")
+        log(f"status={state} message={status.get('message')!r}")
+        time.sleep(POLL_SECONDS)
+    data = status.get("data") or {}
+    (out / "status.json").write_text(json.dumps(status, indent=2))
+    presentation_id = data.get("presentation_id")
+    if not presentation_id:
+        raise RuntimeError(f"no presentation_id in completed task data: {data}")
+    log(f"generation completed: presentation {presentation_id}")
+    findings["presentation_id"] = presentation_id
+
+    # 3. Get the deck; record slide structure.
+    deck = client.request("GET", f"{API}/presentation/{presentation_id}")
+    (out / "deck.json").write_text(json.dumps(deck, indent=2))
+    slides = deck.get("slides", [])
+    if not slides:
+        raise RuntimeError("deck has no slides")
+    log(f"deck: {len(slides)} slides, title={deck.get('title')!r}")
+    findings["n_slides"] = len(slides)
+
+    # 4. Targeted edit: change slide 0's title via deep-merge. Verify BOTH
+    #    that other slides are untouched AND that slide 0 keeps every field
+    #    it had before, with only the title replaced (a wholesale content
+    #    replacement that drops the body must fail this check).
+    before_content = {s["index"]: s.get("content") or {} for s in slides}
+    before = {i: json.dumps(c, sort_keys=True) for i, c in before_content.items()}
+    new_title = "POC Spike Edited Title"
+    edit_content = {"title": new_title}
+    edited = client.request(
+        "POST",
+        f"{API}/presentation/edit",
+        {
+            "presentation_id": presentation_id,
+            "slides": [{"index": 0, "content": edit_content}],
+            "export_as": "pptx",
+        },
+        timeout=300,
+    )
+    log(f"edit ok: {json.dumps(edited)}")
+    deck_after = client.request("GET", f"{API}/presentation/{presentation_id}")
+    after_content = {s["index"]: s.get("content") or {} for s in deck_after["slides"]}
+    after = {i: json.dumps(c, sort_keys=True) for i, c in after_content.items()}
+    changed = [i for i in before if before[i] != after.get(i)]
+    if changed != [0]:
+        raise RuntimeError(f"edit touched unexpected slides: {changed} (expected [0])")
+    expected_slide0 = {**before_content[0], **edit_content}
+    if after_content.get(0) != expected_slide0:
+        raise RuntimeError(
+            "edit did not deep-merge slide 0: expected previous fields preserved "
+            f"with only the title replaced, got {after_content.get(0)!r}"
+        )
+    log("edit verified: only slide 0 changed, other fields preserved, title updated")
+    findings["edit_deep_merges_target_slide"] = True
+    findings["edit_preserves_other_slides"] = True
+
+    # 5. Derive a copy (versioning primitive); original must stay intact.
+    derive_content = {"title": "Derived Copy Title"}
+    derived = client.request(
+        "POST",
+        f"{API}/presentation/derive",
+        {
+            "presentation_id": presentation_id,
+            "slides": [{"index": 0, "content": derive_content}],
+            "export_as": "pptx",
+        },
+        timeout=300,
+    )
+    derived_id = derived["presentation_id"]
+    if derived_id == presentation_id:
+        raise RuntimeError("derive returned the same id (expected a new presentation)")
+    original = client.request("GET", f"{API}/presentation/{presentation_id}")
+    # Compare EVERY slide's full content against the post-edit snapshot, not
+    # just slide 0's title: a derive that corrupts another slide (or rewrites
+    # slide 0 while keeping its title) must fail this check.
+    original_after = {
+        s["index"]: json.dumps(s.get("content"), sort_keys=True)
+        for s in original["slides"]
+    }
+    if original_after != after:
+        keys = set(original_after) | set(after)
+        mutated = sorted(i for i in keys if original_after.get(i) != after.get(i))
+        raise RuntimeError(f"derive mutated the original presentation (slides: {mutated})")
+    # The derived deck must actually contain the requested change: fetch it
+    # and compare every slide against the post-edit snapshot with only the
+    # requested slide-0 change applied (a derive that ignores the payload
+    # must fail this check).
+    derived_deck = client.request("GET", f"{API}/presentation/{derived_id}")
+    derived_content = {s["index"]: s.get("content") or {} for s in derived_deck["slides"]}
+    expected_derived = dict(after_content)
+    expected_derived[0] = {**after_content[0], **derive_content}
+    if derived_content != expected_derived:
+        raise RuntimeError(
+            "derived deck does not match the requested change: expected "
+            f"{expected_derived!r}, got {derived_content!r}"
+        )
+    log(f"derive ok: new id {derived_id}, original untouched, change applied")
+    findings["derived_id"] = derived_id
+    findings["derive_preserves_original"] = True
+    findings["derive_applies_requested_change"] = True
+
+    # 6. Export check: fetch the PPTX for both decks and validate structure.
+    for label, deck_id, path in (
+        ("original", presentation_id, edited.get("path")),
+        ("derived", derived_id, derived.get("path")),
+    ):
+        if not path:
+            raise RuntimeError(f"{label}: no export path returned")
+        export_url = path if path.startswith("http") else client.base + "/" + path.lstrip("/")
+        req = urllib.request.Request(export_url)
+        if api_key:
+            req.add_header("Authorization", f"Bearer {api_key}")
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            blob = resp.read()
+        (out / f"{label}.pptx").write_bytes(blob)
+        check_pptx(blob, label)
+    findings["export_valid_pptx"] = True
+
+    # 7. Editor framing probe.
+    findings["editor"] = probe_editor(client, presentation_id)
+    if not findings["editor"]["framable"]:
+        raise RuntimeError(
+            "editor explicitly forbids framing (X-Frame-Options or CSP "
+            "frame-ancestors): the in-app iframe requirement is not met"
+        )
+
+    (out / "findings.json").write_text(json.dumps(findings, indent=2))
+    log(f"ALL CHECKS PASSED - findings written to {out / 'findings.json'}")
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except Exception as exc:  # noqa: BLE001 - spike script: report and fail loudly
+        log(f"FAILED: {exc}")
+        sys.exit(1)

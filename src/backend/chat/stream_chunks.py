@@ -30,6 +30,7 @@ from pydantic_ai.messages import (
 from chat.ai_sdk_types import UIMessage
 from chat.clients.pydantic_ui_message_converter import (
     attach_tool_charts,
+    attach_tool_presentations,
     merge_by_kind,
     model_message_to_ui_message,
 )
@@ -189,6 +190,7 @@ def interrupted_messages(chunks) -> list[UIMessage]:
             ui_messages.append(ui_message)
     if ui_messages and ui_messages[-1].role == "assistant":
         attach_tool_charts(ui_messages[-1], request)
+        attach_tool_presentations(ui_messages[-1], request)
     if not ui_messages:
         return []
 

@@ -45,6 +45,7 @@ class FeatureFlags(BaseModel):
     web_search: FeatureToggle = FeatureToggle.DISABLED
     document_upload: FeatureToggle = FeatureToggle.DISABLED
     presentation_generation: FeatureToggle = FeatureToggle.DISABLED
+    presenton_sidecar: FeatureToggle = FeatureToggle.DISABLED
     datagouv_connector: FeatureToggle = FeatureToggle.DISABLED
 
     def __getattr__(self, name: str):

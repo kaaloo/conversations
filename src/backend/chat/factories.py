@@ -70,3 +70,14 @@ class ChatProjectAttachmentFactory(factory.django.DjangoModelFactory):
 
     class Meta:
         model = models.ChatConversationAttachment
+
+
+class ChatPresentationLinkFactory(factory.django.DjangoModelFactory):
+    """Factory for conversation-to-Presenton deck links (slides-loop POC)."""
+
+    conversation = factory.SubFactory(ChatConversationFactory)
+    presentation_id = factory.LazyFunction(uuid4)
+    title = factory.Sequence(lambda n: f"deck {n}")
+
+    class Meta:
+        model = models.ChatPresentationLink

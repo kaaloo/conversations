@@ -1,0 +1,32 @@
+# Presenton sidecar configuration (POC). Copy to env.d/development/presenton
+# and fill in the LLM values, then load it when starting the sidecar:
+#
+#   cp env.d/development/presenton.dist env.d/development/presenton
+#   set -a; . env.d/development/presenton; set +a
+#   docker compose -f compose.yml -f compose.presenton.yml up -d presenton
+#
+# Any OpenAI-compatible endpoint works. Sovereign example (Etalab Mistral):
+#   PRESENTON_LLM_BASE_URL=https://api.mistral.etalab.gouv.fr/v1
+#   PRESENTON_LLM_MODEL=mistral-medium-3-5
+# Local example (Ollama on the host):
+#   PRESENTON_LLM_BASE_URL=http://host.docker.internal:11434/v1
+#   PRESENTON_LLM_MODEL=qwen2.5:14b
+
+PRESENTON_LLM_BASE_URL=
+PRESENTON_LLM_API_KEY=
+PRESENTON_LLM_MODEL=
+
+# Host port for the sidecar (loopback only).
+PRESENTON_HOST_PORT=5001
+
+# Base URL the spike script and the backend client use.
+PRESENTON_URL=http://localhost:5001
+
+# Backend -> sidecar API address. Inside the compose network the backend
+# reaches the service by name; on the host it is the published port.
+PRESENTON_BASE_URL=http://presenton:80
+
+# Browser -> sidecar origin for the editor/export card URLs. This must be
+# reachable from the user's browser (the published loopback port), NOT the
+# compose service hostname. Defaults to PRESENTON_BASE_URL when unset.
+PRESENTON_BROWSER_BASE_URL=http://localhost:5001

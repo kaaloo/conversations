@@ -56,6 +56,31 @@ const renderQueryTable = (output: unknown) =>
     />,
   );
 
+const PRESENTATION = {
+  presentation_id: '11111111-1111-1111-1111-111111111111',
+  link_id: '22222222-2222-2222-2222-222222222222',
+  title: 'Sobriété énergétique',
+  slide_count: 6,
+  editor_url: 'http://localhost:5001/presentation?id=11111111',
+  download_url: 'http://localhost:5001/app_data/exports/deck.pptx',
+};
+
+const renderSidecarPresentation = (
+  output: unknown,
+  state = 'output-available',
+) =>
+  render(
+    <ToolInvocationItem
+      toolInvocation={{
+        type: 'tool-generate_presentation_sidecar',
+        toolCallId: 'test-id',
+        state: state as 'output-available',
+        input: {},
+        output,
+      }}
+    />,
+  );
+
 describe('ToolInvocationItem', () => {
   beforeEach(() => {
     mockStatusPageUrl = 'https://status.example.com';
@@ -280,6 +305,76 @@ describe('ToolInvocationItem', () => {
         ),
       ).toBeInTheDocument();
       expect(screen.queryByRole('link')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('generate_presentation_sidecar', () => {
+    it('shows the deck title, slide count and actions', () => {
+      renderSidecarPresentation({ presentation: PRESENTATION });
+
+      expect(screen.getByText('Sobriété énergétique')).toBeInTheDocument();
+      expect(screen.getByText('{{count}} slides')).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'Edit slides' }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('link', { name: 'Download PPTX' }),
+      ).toHaveAttribute('href', PRESENTATION.download_url);
+    });
+
+    it('opens the editor inline, not in a new tab', async () => {
+      renderSidecarPresentation({ presentation: PRESENTATION });
+
+      expect(screen.queryByTitle(/Slide editor/)).not.toBeInTheDocument();
+
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Edit slides' }),
+      );
+
+      const frame = screen.getByTitle(/Slide editor/);
+      expect(frame.tagName).toBe('IFRAME');
+      expect(frame).toHaveAttribute('src', PRESENTATION.editor_url);
+      expect(frame).not.toHaveAttribute('target');
+    });
+
+    it('closes the editor again', async () => {
+      renderSidecarPresentation({ presentation: PRESENTATION });
+
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Edit slides' }),
+      );
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Close editor' }),
+      );
+
+      expect(screen.queryByTitle(/Slide editor/)).not.toBeInTheDocument();
+    });
+
+    it('omits the download action when there is no export url', () => {
+      renderSidecarPresentation({
+        presentation: { ...PRESENTATION, download_url: null },
+      });
+
+      expect(
+        screen.queryByRole('link', { name: 'Download PPTX' }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('renders nothing for a malformed card', () => {
+      const { container } = renderSidecarPresentation({
+        presentation: { ...PRESENTATION, editor_url: 'javascript:alert(1)' },
+      });
+
+      expect(container).toBeEmptyDOMElement();
+    });
+
+    it('renders nothing before the output is available', () => {
+      const { container } = renderSidecarPresentation(
+        { presentation: PRESENTATION },
+        'input-available',
+      );
+
+      expect(container).toBeEmptyDOMElement();
     });
   });
 });
