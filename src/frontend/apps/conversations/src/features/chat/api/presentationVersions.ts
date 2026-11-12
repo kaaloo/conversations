@@ -45,3 +45,18 @@ export const restorePresentationVersion = async (
   }
   return response.json() as Promise<PresentationVersion>;
 };
+
+/** Fetch a fresh export URL for the current deck (always up to date). */
+export const exportPresentation = async (
+  conversationId: string,
+  linkId: string,
+): Promise<string | null> => {
+  const response = await fetchAPI(
+    `chats/${conversationId}/presentations/${linkId}/export/`,
+  );
+  if (!response.ok) {
+    throw new APIError('Failed to export deck', await errorCauses(response));
+  }
+  const data = (await response.json()) as { download_url: string | null };
+  return data.download_url;
+};

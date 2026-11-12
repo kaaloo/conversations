@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Box, Icon, Text } from '@/components';
+import { exportPresentation } from '@/features/chat/api/presentationVersions';
 import { PresentationComments } from '@/features/chat/components/PresentationComments';
 import { PresentationVersions } from '@/features/chat/components/PresentationVersions';
 import type { PresentationCardData } from '@/features/chat/utils/presentationCard';
@@ -24,7 +25,26 @@ export const PresentationCard = ({
   const [editorOpen, setEditorOpen] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [versionsOpen, setVersionsOpen] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const conversationId = useConversationRouteId();
+
+  // Always export the current deck: a restore or rework changes the content,
+  // so the URL captured at generation time may be stale.
+  const download = async () => {
+    if (!conversationId) return;
+    setDownloading(true);
+    try {
+      const url = await exportPresentation(conversationId, presentation.linkId);
+      if (url) {
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = '';
+        link.click();
+      }
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   return (
     <Box
@@ -71,8 +91,10 @@ export const PresentationCard = ({
             size="small"
             color="neutral"
             variant="secondary"
-            href={presentation.downloadUrl}
-            download
+            disabled={downloading}
+            onClick={() => {
+              void download();
+            }}
             icon={<Icon iconName="download" $theme="inherit" $size="sm" />}
           >
             {t('Download PPTX')}
