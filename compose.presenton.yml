@@ -1,0 +1,43 @@
+# Presenton sidecar for the slides-loop POC (see docs/presenton-sidecar.md).
+# Additive overlay: the base compose.yml is untouched.
+#
+#   docker compose -f compose.yml -f compose.presenton.yml up -d presenton
+#
+# Security posture: the sidecar binds to loopback only and runs with
+# DISABLE_AUTH=true (single-user runtime). That disables API authentication
+# too, so never publish this port beyond 127.0.0.1 and never use this overlay
+# on a shared or public host.
+
+services:
+  presenton:
+    image: ghcr.io/presenton/presenton:v0.9.12-beta
+    ports:
+      - "127.0.0.1:${PRESENTON_HOST_PORT:-5001}:80"
+    volumes:
+      - ./data/presenton:/app_data
+    # Resolve host.docker.internal on native Linux Docker Engine (the Ollama
+    # example in env.d/development/presenton.dist); Docker Desktop maps it
+    # automatically, Linux needs the explicit host-gateway entry.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      # Single-user runtime: no login screen, editor framable without a session.
+      - DISABLE_AUTH=true
+      - MIGRATE_DATABASE_ON_STARTUP=true
+      # LLM provider: any OpenAI-compatible endpoint (Etalab Mistral, Ollama...).
+      - LLM=custom
+      - CUSTOM_LLM_URL=${PRESENTON_LLM_BASE_URL:?set PRESENTON_LLM_BASE_URL in env.d/development/presenton}
+      - CUSTOM_LLM_API_KEY=${PRESENTON_LLM_API_KEY:-not-needed}
+      - CUSTOM_MODEL=${PRESENTON_LLM_MODEL:?set PRESENTON_LLM_MODEL in env.d/development/presenton}
+      # Keep the POC lean and offline-friendly.
+      - DISABLE_IMAGE_GENERATION=true
+      - MEM0_ENABLED=false
+      - PRESENTON_COMMUNITY_ENABLED=false
+      - DISABLE_ANONYMOUS_TRACKING=true
+      - WEB_GROUNDING=false
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:80/ >/dev/null || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 30s
