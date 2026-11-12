@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { ToolInvocationItem } from '../ToolInvocationItem';
@@ -20,6 +20,13 @@ vi.mock('@/core', () => ({
 
 vi.mock('@/utils/useConversationRouteId', () => ({
   useConversationRouteId: () => 'conv-1',
+}));
+
+const exportPresentationMock = vi.fn();
+vi.mock('@/features/chat/api/presentationVersions', () => ({
+  exportPresentation: (...args: unknown[]) => exportPresentationMock(...args),
+  listPresentationVersions: vi.fn().mockResolvedValue([]),
+  restorePresentationVersion: vi.fn(),
 }));
 
 const renderResultError = (kind?: string) =>
@@ -322,8 +329,8 @@ describe('ToolInvocationItem', () => {
         screen.getByRole('button', { name: 'Edit slides' }),
       ).toBeInTheDocument();
       expect(
-        screen.getByRole('link', { name: 'Download PPTX' }),
-      ).toHaveAttribute('href', PRESENTATION.download_url);
+        screen.getByRole('button', { name: 'Download PPTX' }),
+      ).toBeInTheDocument();
     });
 
     it('opens the editor inline, not in a new tab', async () => {
@@ -360,8 +367,26 @@ describe('ToolInvocationItem', () => {
       });
 
       expect(
-        screen.queryByRole('link', { name: 'Download PPTX' }),
+        screen.queryByRole('button', { name: 'Download PPTX' }),
       ).not.toBeInTheDocument();
+    });
+
+    it('downloads via a fresh export of the current deck', async () => {
+      exportPresentationMock.mockResolvedValue(
+        'http://localhost:5001/app_data/exports/fresh.pptx',
+      );
+      renderSidecarPresentation({ presentation: PRESENTATION });
+
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Download PPTX' }),
+      );
+
+      await waitFor(() =>
+        expect(exportPresentationMock).toHaveBeenCalledWith(
+          'conv-1',
+          PRESENTATION.link_id,
+        ),
+      );
     });
 
     it('renders nothing for a malformed card', () => {

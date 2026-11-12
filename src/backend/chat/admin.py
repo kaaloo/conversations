@@ -375,3 +375,23 @@ class PresentationCommentAdmin(admin.ModelAdmin):
         "resolved",
         "created_at",
     )
+
+
+@admin.register(models.PresentationVersion)
+class PresentationVersionAdmin(admin.ModelAdmin):
+    """Admin class for the PresentationVersion model (slides-loop POC, P5)."""
+
+    search_fields = ("id",)
+    ordering = ("link", "number")
+    date_hierarchy = "created_at"
+    list_filter = ("source",)
+    autocomplete_fields = ("link",)
+    list_select_related = ("link",)
+    list_display = (
+        "id",
+        "link",
+        "number",
+        "source",
+        "slide_count",
+        "created_at",
+    )

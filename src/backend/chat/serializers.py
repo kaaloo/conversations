@@ -250,6 +250,16 @@ class PresentationCommentReadSerializer(serializers.Serializer):  # pylint: disa
     created_at = serializers.DateTimeField()
 
 
+class PresentationVersionReadSerializer(serializers.Serializer):  # pylint: disable=abstract-method
+    """Read shape of a deck version snapshot (POC, P5)."""
+
+    id = serializers.UUIDField()
+    number = serializers.IntegerField()
+    source = serializers.CharField()
+    slide_count = serializers.IntegerField()
+    created_at = serializers.DateTimeField()
+
+
 class LLMConfigurationSerializer(serializers.Serializer):  # pylint: disable=abstract-method
     """Serializer for LLM configuration."""
 
