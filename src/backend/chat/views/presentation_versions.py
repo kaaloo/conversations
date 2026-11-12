@@ -88,10 +88,14 @@ class PresentationVersionsMixin:
             extra_slides=extra_slides,
         )
         data = serializers.PresentationVersionReadSerializer(new_version).data
-        if extra_slides:
-            data["note"] = (
-                "The sidecar merges content on restore; slides added after this version were kept."
-            )
+        # The sidecar's v1 edit deep-merges, so an exact rollback cannot be
+        # guaranteed: slides added after the snapshot are kept, and content
+        # keys added to existing slides are preserved too. Always surface the
+        # merge semantics rather than implying a byte-for-byte restore.
+        data["note"] = (
+            "Restored by merging the snapshot into the live deck; content added "
+            "after this version may have been kept."
+        )
         return Response(data, status=status.HTTP_201_CREATED)
 
     @decorators.action(

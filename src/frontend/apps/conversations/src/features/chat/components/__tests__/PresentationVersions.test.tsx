@@ -58,10 +58,28 @@ describe('PresentationVersions', () => {
     renderPanel();
 
     await screen.findAllByText('Version {{n}}');
-    await userEvent.click(screen.getByLabelText('Restore version {{n}}'));
+    const restoreButtons = screen.getAllByLabelText('Restore version {{n}}');
+    // The older version (number 1) is the second row.
+    await userEvent.click(restoreButtons[1]);
 
     await waitFor(() =>
       expect(restoreVersion).toHaveBeenCalledWith('conv-1', 'link-1', 1),
+    );
+  });
+
+  it('allows restoring the latest recorded snapshot', async () => {
+    listVersions.mockResolvedValue(VERSIONS);
+    restoreVersion.mockResolvedValue({ ...VERSIONS[0], number: 3 });
+    renderPanel();
+
+    await screen.findAllByText('Version {{n}}');
+    const restoreButtons = screen.getAllByLabelText('Restore version {{n}}');
+    // Manual edits are not recorded, so the latest snapshot is restorable too.
+    expect(restoreButtons.length).toBe(2);
+    await userEvent.click(restoreButtons[0]);
+
+    await waitFor(() =>
+      expect(restoreVersion).toHaveBeenCalledWith('conv-1', 'link-1', 2),
     );
   });
 

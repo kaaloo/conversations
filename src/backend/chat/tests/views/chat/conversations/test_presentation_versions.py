@@ -79,7 +79,9 @@ def test_restore_version(auth_client, conversation, link):
     assert response.status_code == status.HTTP_201_CREATED
     assert response.json()["number"] == 2
     assert response.json()["source"] == "restore"
-    assert "note" not in response.json()
+    # Restore always surfaces the merge semantics (exact rollback is not
+    # guaranteed by the sidecar's deep-merge edit).
+    assert "note" in response.json()
     client.edit_presentation.assert_awaited_once()
     assert PresentationVersion.objects.filter(link=link, number=2).exists()
 

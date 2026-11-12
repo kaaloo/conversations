@@ -84,7 +84,7 @@ export const PresentationVersions = ({
           <Box $direction="column" $flex={1} $css="min-width: 0;">
             <Text $size="sm" $weight="600">
               {t('Version {{n}}', { n: version.number })}
-              {idx === 0 ? ` · ${t('current')}` : ''}
+              {idx === 0 ? ` · ${t('latest recorded')}` : ''}
             </Text>
             <Text $theme="neutral" $variation="secondary" $size="sm">
               {t('{{source}} · {{count}} slides', {
@@ -93,19 +93,20 @@ export const PresentationVersions = ({
               })}
             </Text>
           </Box>
-          {idx !== 0 && (
-            <Button
-              size="nano"
-              color="neutral"
-              variant="tertiary"
-              disabled={busy}
-              onClick={() => {
-                void restore(version.number);
-              }}
-              aria-label={t('Restore version {{n}}', { n: version.number })}
-              icon={<Icon iconName="history" $theme="inherit" $size="sm" />}
-            />
-          )}
+          {/* Manual edits in the embedded editor are not recorded as versions,
+              so even the latest snapshot may differ from the live deck; allow
+              restoring it to undo those edits. */}
+          <Button
+            size="nano"
+            color="neutral"
+            variant="tertiary"
+            disabled={busy}
+            onClick={() => {
+              void restore(version.number);
+            }}
+            aria-label={t('Restore version {{n}}', { n: version.number })}
+            icon={<Icon iconName="history" $theme="inherit" $size="sm" />}
+          />
         </Box>
       ))}
 
