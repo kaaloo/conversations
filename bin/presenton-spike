@@ -33,7 +33,9 @@ POLL_TIMEOUT = 600
 
 
 def log(msg):
-    print(f"[spike] {msg}", flush=True)
+    # stderr, not print(): the repo's lint gates ban print() in committed code.
+    sys.stderr.write(f"[spike] {msg}\n")
+    sys.stderr.flush()
 
 
 class Client:

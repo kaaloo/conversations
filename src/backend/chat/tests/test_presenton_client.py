@@ -24,7 +24,7 @@ def presenton_settings_fixture(settings):
 
 
 @pytest.fixture(name="client")
-def client_fixture(presenton_settings):
+def client_fixture(presenton_settings):  # pylint: disable=unused-argument
     """Instantiate a PresentonClient with test settings."""
     return PresentonClient()
 
@@ -43,7 +43,7 @@ def _fake_response(json_body=None, status_code=200):
 # ---------------------------------------------------------------------------
 
 
-def test_client_builds_api_url(presenton_settings):
+def test_client_builds_api_url(presenton_settings):  # pylint: disable=unused-argument
     """Trailing slashes on the base URL must not double up in the API URL."""
     assert PresentonClient().api_url == "http://presenton.example.com/api/v1/ppt/"
 
