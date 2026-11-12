@@ -971,6 +971,15 @@ class Base(
         default=30, environ_name="DOCS_API_TIMEOUT", environ_prefix=None
     )
 
+    # Presenton sidecar (slides-loop POC). The API key authenticates backend
+    # calls only; it must never reach the browser. Leave PRESENTON_BASE_URL
+    # unset to keep the integration inert even if the feature flag is on.
+    PRESENTON_BASE_URL = values.Value(None, environ_name="PRESENTON_BASE_URL", environ_prefix=None)
+    PRESENTON_API_KEY = values.Value(None, environ_name="PRESENTON_API_KEY", environ_prefix=None)
+    PRESENTON_API_TIMEOUT = values.PositiveIntegerValue(
+        default=120, environ_name="PRESENTON_API_TIMEOUT", environ_prefix=None
+    )
+
     AUTO_TITLE_AFTER_USER_MESSAGES = values.PositiveIntegerValue(
         default=None, environ_name="AUTO_TITLE_AFTER_USER_MESSAGES", environ_prefix=None
     )

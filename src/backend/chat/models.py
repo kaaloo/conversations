@@ -491,3 +491,36 @@ class ModelHealth(models.Model):
 
     def __str__(self):
         return f"{self.provider}/{self.model_id}: {self.status}"
+
+
+class ChatPresentationLink(BaseModel):
+    """Link a conversation to a deck stored in the Presenton sidecar (POC).
+
+    Presenton owns the deck content and its version lineage (``derive``
+    creates a new presentation id per version); Conversations only keeps the
+    mapping and the current head id. Comments and the rework bridge (P4)
+    attach to this row.
+    """
+
+    conversation = models.ForeignKey(
+        ChatConversation,
+        related_name="presentation_links",
+        on_delete=models.CASCADE,
+        help_text="Conversation the deck was generated from",
+    )
+    presentation_id = models.UUIDField(
+        help_text="Current head presentation id in the Presenton sidecar",
+    )
+    title = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        help_text="Deck title as reported by the sidecar (may be trimmed)",
+    )
+
+    class Meta:  # pylint: disable=missing-class-docstring
+        ordering = ["-created_at"]
+        indexes = [models.Index(fields=["conversation", "-created_at"])]
+
+    def __str__(self):
+        return f"{self.conversation_id}: {self.presentation_id}"
