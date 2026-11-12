@@ -132,6 +132,24 @@ Examples that must NOT trigger this tool:
 - "Comment structurer une bonne présentation ?"
 """
 
+REVISE_PRESENTATION_SIDECAR_TOOL_DESCRIPTION = """
+Rework an existing slide deck using the comments pinned to its slides.
+
+Use this tool when the user asks to revise, rework, improve or apply feedback
+to a presentation that was already generated in this conversation. The deck
+card carries its presentation_id; pass that id. The tool reads the latest
+version of the deck (including the user's manual edits), applies each
+unresolved comment to its slide, and marks the comments addressed.
+
+Pass an optional instruction for overall guidance (tone, length, language).
+Do not restate the deck's content; tell the user the revision is ready to
+review in the deck card.
+
+Do NOT use this tool to:
+- Generate a brand-new deck (use generate_presentation_sidecar)
+- Revise a deck that has no pinned comments and no specific change requested
+"""
+
 SELF_DOCUMENTATION_SYSTEM_PROMPT = (
     "For meta questions about THIS assistant itself (identity, model, "
     "capabilities, limitations, privacy, internet access, accepted files, "

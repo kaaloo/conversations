@@ -223,6 +223,33 @@ class EditInDocsSerializer(serializers.Serializer):  # pylint: disable=abstract-
     message_id = serializers.CharField(help_text="ID of the assistant message to edit in Docs.")
 
 
+class PresentationCommentSerializer(serializers.Serializer):  # pylint: disable=abstract-method
+    """Serializer for pinning a comment to a sidecar deck slide (POC, P4)."""
+
+    slide_index = serializers.IntegerField(
+        min_value=0, help_text="Zero-based index of the slide the comment targets."
+    )
+    field = serializers.CharField(
+        max_length=64,
+        required=False,
+        allow_blank=True,
+        default="",
+        help_text="Optional slide field the comment targets (empty = whole slide).",
+    )
+    body = serializers.CharField(help_text="The feedback text.")
+
+
+class PresentationCommentReadSerializer(serializers.Serializer):  # pylint: disable=abstract-method
+    """Read shape of a pinned deck comment."""
+
+    id = serializers.UUIDField()
+    slide_index = serializers.IntegerField()
+    field = serializers.CharField()
+    body = serializers.CharField()
+    resolved = serializers.BooleanField()
+    created_at = serializers.DateTimeField()
+
+
 class LLMConfigurationSerializer(serializers.Serializer):  # pylint: disable=abstract-method
     """Serializer for LLM configuration."""
 

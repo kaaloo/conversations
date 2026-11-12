@@ -36,6 +36,7 @@ from chat.serializers import ChatConversationRequestSerializer
 from chat.views.edit_in_docs import EditInDocsMixin
 from chat.views.filters import ProjectFilter, TitleSearchFilter
 from chat.views.helpers import _bulk_delete_s3_blobs, conditional_refresh_oidc_token
+from chat.views.presentation_comments import PresentationCommentsMixin
 
 logger = structlog.get_logger(__name__)
 
@@ -95,6 +96,7 @@ class ChatViewSet(  # pylint: disable=too-many-ancestors, abstract-method
     mixins.UpdateModelMixin,
     ChatAttachmentMixin,
     EditInDocsMixin,
+    PresentationCommentsMixin,
     viewsets.GenericViewSet,
 ):
     """ViewSet for managing chat conversations.

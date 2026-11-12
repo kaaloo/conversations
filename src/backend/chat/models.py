@@ -524,3 +524,48 @@ class ChatPresentationLink(BaseModel):
 
     def __str__(self):
         return f"{self.conversation_id}: {self.presentation_id}"
+
+
+class PresentationComment(BaseModel):
+    """A slide-anchored comment on a sidecar deck (slides-loop POC, P4).
+
+    Comments are the rework bridge: the user pins feedback to a slide (and
+    optionally a field), and the ``revise_presentation_sidecar`` tool feeds
+    the unresolved ones to Presenton's AI slide edit, then marks them
+    resolved. Anchoring to slide index + field (not pixels) keeps comments
+    meaningful across re-layouts and trivially serializable into a prompt.
+    """
+
+    link = models.ForeignKey(
+        ChatPresentationLink,
+        related_name="comments",
+        on_delete=models.CASCADE,
+        help_text="Deck the comment is pinned to",
+    )
+    author = models.ForeignKey(
+        User,
+        related_name="presentation_comments",
+        on_delete=models.CASCADE,
+        help_text="User who wrote the comment",
+    )
+    slide_index = models.PositiveIntegerField(
+        help_text="Zero-based index of the slide the comment targets",
+    )
+    field = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        help_text="Optional slide field the comment targets (empty = whole slide)",
+    )
+    body = models.TextField(help_text="The feedback text")
+    resolved = models.BooleanField(
+        default=False,
+        help_text="Whether a rework has addressed this comment",
+    )
+
+    class Meta:  # pylint: disable=missing-class-docstring
+        ordering = ["created_at"]
+        indexes = [models.Index(fields=["link", "resolved"])]
+
+    def __str__(self):
+        return f"{self.link_id} slide {self.slide_index}: {self.body[:40]}"

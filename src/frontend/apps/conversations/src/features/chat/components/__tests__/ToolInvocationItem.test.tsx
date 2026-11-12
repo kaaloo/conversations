@@ -18,6 +18,10 @@ vi.mock('@/core', () => ({
   }),
 }));
 
+vi.mock('@/utils/useConversationRouteId', () => ({
+  useConversationRouteId: () => 'conv-1',
+}));
+
 const renderResultError = (kind?: string) =>
   render(
     <ToolInvocationItem

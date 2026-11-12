@@ -81,3 +81,17 @@ class ChatPresentationLinkFactory(factory.django.DjangoModelFactory):
 
     class Meta:
         model = models.ChatPresentationLink
+
+
+class PresentationCommentFactory(factory.django.DjangoModelFactory):
+    """Factory for slide-anchored deck comments (slides-loop POC, P4)."""
+
+    link = factory.SubFactory(ChatPresentationLinkFactory)
+    author = factory.SubFactory(UserFactory)
+    slide_index = factory.Sequence(lambda n: n)
+    field = ""
+    body = factory.Sequence(lambda n: f"feedback {n}")
+    resolved = False
+
+    class Meta:
+        model = models.PresentationComment

@@ -130,6 +130,21 @@ class PresentonClient:
             },
         )
 
+    async def edit_slide_ai(self, slide_id: str, prompt: str) -> dict:
+        """Apply an AI-assisted edit to one stored slide, in place.
+
+        ``slide_id`` is the slide's UUID (from ``get_presentation``), not its
+        index. Presenton rewrites the slide content from the prompt; the rest
+        of the deck is untouched. This is the primitive the rework bridge uses
+        to act on slide-anchored comments.
+        """
+        return await self._request(
+            "POST",
+            "slide/edit",
+            "edit_slide_ai",
+            json={"id": slide_id, "prompt": prompt},
+        )
+
     def editor_url(self, presentation_id: str) -> str:
         """Browser URL of the canvas editor for one deck (framable, no token).
 
