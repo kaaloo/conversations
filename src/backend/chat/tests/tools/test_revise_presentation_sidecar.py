@@ -183,7 +183,9 @@ async def test_rework_persists_completed_comments_on_later_failure(ctx, link, mo
     """
     link.presentation_id = "11111111-1111-1111-1111-111111111111"
     await sync_to_async(link.save)()
-    first = await sync_to_async(PresentationCommentFactory)(link=link, slide_index=0, body="first")
+    first = await sync_to_async(PresentationCommentFactory)(
+        link=link, slide_index=0, body="first"
+    )
     second = await sync_to_async(PresentationCommentFactory)(
         link=link, slide_index=1, body="second"
     )
