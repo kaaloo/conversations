@@ -355,3 +355,23 @@ class ChatPresentationLinkAdmin(admin.ModelAdmin):
         "created_at",
         "updated_at",
     )
+
+
+@admin.register(models.PresentationComment)
+class PresentationCommentAdmin(admin.ModelAdmin):
+    """Admin class for the PresentationComment model (slides-loop POC, P4)."""
+
+    search_fields = ("id", "body")
+    ordering = ("created_at",)
+    date_hierarchy = "created_at"
+    list_filter = ("resolved",)
+    autocomplete_fields = ("link", "author")
+    list_select_related = ("link", "author")
+    list_display = (
+        "id",
+        "link",
+        "slide_index",
+        "field",
+        "resolved",
+        "created_at",
+    )

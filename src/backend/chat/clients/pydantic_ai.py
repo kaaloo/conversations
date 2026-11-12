@@ -176,6 +176,7 @@ from chat.tools.descriptions import (
     GENERATE_PRESENTATION_SIDECAR_TOOL_DESCRIPTION,
     GENERATE_PRESENTATION_TOOL_DESCRIPTION,
     QUERY_TABLE_TOOL_DESCRIPTION,
+    REVISE_PRESENTATION_SIDECAR_TOOL_DESCRIPTION,
     SELF_DOCUMENTATION_SYSTEM_PROMPT,
     SELF_DOCUMENTATION_TOOL_DESCRIPTION,
     TABULAR_SYSTEM_PROMPT,
@@ -186,6 +187,7 @@ from chat.tools.document_search_rag import add_document_rag_search_tool
 from chat.tools.document_summarize import document_summarize, document_summarize_project
 from chat.tools.generate_presentation import generate_presentation
 from chat.tools.generate_presentation_sidecar import generate_presentation_sidecar
+from chat.tools.revise_presentation_sidecar import revise_presentation_sidecar
 from chat.tools.self_documentation import build_self_documentation_payload
 from chat.tools.tabular import describe_tables, query_table
 from chat.tools.utils import soft_fail_last_invalid_tool_call
@@ -1292,6 +1294,16 @@ class AIAgentService:  # pylint: disable=too-many-instance-attributes
         ) -> ToolReturn:
             """Wrap the sidecar generation tool to provide context and add the tool."""
             return await generate_presentation_sidecar(ctx, *args, **kwargs)
+
+        @self.conversation_agent.tool(
+            name="revise_presentation_sidecar",
+            retries=1,
+            description=REVISE_PRESENTATION_SIDECAR_TOOL_DESCRIPTION,
+        )
+        @functools.wraps(revise_presentation_sidecar)
+        async def revise_presentation_sidecar_tool(ctx: RunContext, *args, **kwargs) -> ToolReturn:
+            """Wrap the sidecar rework tool to provide context and add the tool."""
+            return await revise_presentation_sidecar(ctx, *args, **kwargs)
 
         self._presenton_sidecar_tool_registered = True
 
