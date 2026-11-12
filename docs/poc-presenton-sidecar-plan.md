@@ -316,6 +316,35 @@ works against the shared provider, continue with PRs 2-4 for a full loop. If not
 back to the native plan, which has no such dependency. Either way the comment→agent
 bridge design is shared, so effort is not wasted across the two approaches.
 
+## 9. P1 spike outcome (2026-11-12, executed)
+
+Ran in the cloud sandbox: Docker 20.10 + compose v2 installed, image
+`ghcr.io/presenton/presenton:v0.9.12-beta` (3.7 GB), provider = Etalab Mistral
+(`mistral-medium-3-5`) via `LLM=custom`, `DISABLE_AUTH=true`, loopback-only port.
+
+`bin/presenton-spike` passed every check (~70 s wall clock for a 4-slide deck):
+
+- async generate → status poll → completed; deck of 4 slides returned.
+- `edit` deep-merge changed slide 0 only; all other slides byte-identical in content.
+- `derive` produced a new presentation id; original verified untouched.
+- Both exports downloaded and validated as real PPTX (4 slide parts each).
+- Editor page: no `X-Frame-Options`, no CSP `frame-ancestors`.
+
+**Real-browser iframe verification (the no-new-tab requirement):** a host page on
+`127.0.0.1:8090` framed `http://localhost:5001/presentation?id=...` in headless
+Chrome. The full editor rendered inside the iframe - slide rail, canvas (showing the
+title edited via the API), theme panel, Export button. No login screen in
+`DISABLE_AUTH` mode. Screenshot and `findings.json` preserved as P1 evidence.
+
+**Go/no-go: GREEN.** Proceed to P2 (backend client + mapping). Notes for later PRs:
+
+- Generation messages stream through status (`Generating presentation outlines`,
+  `Generating slides`, `Fetching assets`); the P3 tool can surface them.
+- The deck `title` field came back as a long concatenation of cover content; the
+  card should prefer a trimmed title or the first slide's title field.
+- Sandbox disk is tight with the 3.7 GB image present; teardown (`docker rm -f` +
+  `docker rmi`) reclaims it when the POC pauses.
+
 ---
 
 Prepared by Dave (Letta Code) on the refreshed fork, 2026-11-12.
