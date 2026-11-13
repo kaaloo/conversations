@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+#
+# Stop the slides-loop POC stack (companion to bin/presenton-up).
+#
+# Usage:
+#   bin/presenton-down          # stop containers, keep ./data (DB, decks, storage)
+#   bin/presenton-down --wipe   # stop and delete ./data/presenton (sidecar state)
+#   bin/presenton-down --all    # stop and delete ALL local data (DB, storage, decks)
+
+set -euo pipefail
+
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "${REPO_DIR}"
+
+COMPOSE=( docker compose -f compose.yml -f compose.presenton.yml )
+
+WIPE=0
+ALL=0
+for arg in "$@"; do
+    case "${arg}" in
+        --wipe) WIPE=1 ;;
+        --all)  WIPE=1; ALL=1 ;;
+        -h|--help) sed -n '2,12p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        *) echo "unknown option: ${arg} (try --help)" >&2; exit 2 ;;
+    esac
+done
+
+echo "==> stopping services"
+"${COMPOSE[@]}" down --remove-orphans
+
+if [ "${WIPE}" -eq 1 ]; then
+    echo "==> deleting data/presenton"
+    rm -rf data/presenton
+fi
+
+if [ "${ALL}" -eq 1 ]; then
+    echo "==> deleting all local data (database, object storage, static)"
+    rm -rf data/objectstorage data/static
+    echo "note: the postgres data lives in a named volume; remove it with:"
+    echo "      ${COMPOSE[*]} down --volumes"
+fi
+
+echo "done."
