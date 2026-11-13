@@ -26,6 +26,18 @@ for arg in "$@"; do
 done
 
 echo "==> stopping services"
+# The overlay marks PRESENTON_LLM_* as required, so compose refuses to even
+# parse it without them. Load the env file when present; fall back to harmless
+# placeholders so teardown still works after the env file was deleted.
+if [ -f env.d/development/presenton ]; then
+    set -a
+    # shellcheck disable=SC1091
+    . env.d/development/presenton
+    set +a
+fi
+export PRESENTON_LLM_BASE_URL="${PRESENTON_LLM_BASE_URL:-http://unused.invalid/v1}"
+export PRESENTON_LLM_MODEL="${PRESENTON_LLM_MODEL:-unused}"
+
 "${COMPOSE[@]}" down --remove-orphans
 
 if [ "${WIPE}" -eq 1 ]; then
