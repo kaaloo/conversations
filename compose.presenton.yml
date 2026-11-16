@@ -29,7 +29,7 @@ services:
       - PRESENTON_API_KEY=${PRESENTON_API_KEY:-}
 
   presenton:
-    image: ghcr.io/presenton/presenton:v0.9.12-beta
+    image: ${PRESENTON_IMAGE:-ghcr.io/kaaloo/presenton@sha256:e8640957af9b45b7f0ef2664eca3c3abf243eac5243cec792cc3795336e24e35}
     ports:
       - "127.0.0.1:${PRESENTON_HOST_PORT:-5001}:80"
     volumes:

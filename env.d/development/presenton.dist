@@ -30,3 +30,8 @@ PRESENTON_BASE_URL=http://presenton:80
 # reachable from the user's browser (the published loopback port), NOT the
 # compose service hostname. Defaults to PRESENTON_BASE_URL when unset.
 PRESENTON_BROWSER_BASE_URL=http://localhost:5001
+
+# Custom DSFR editor image. The compose overlay supplies this default when
+# unset. To use stock Presenton instead, set the official upstream image:
+#   PRESENTON_IMAGE=ghcr.io/presenton/presenton:v0.9.12-beta
+PRESENTON_IMAGE=ghcr.io/kaaloo/presenton@sha256:e8640957af9b45b7f0ef2664eca3c3abf243eac5243cec792cc3795336e24e35
