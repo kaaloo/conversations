@@ -69,6 +69,24 @@ embedding models). Generation runs a full LLM outline + per-slide content
 pipeline; on a laptop expect tens of seconds to a few minutes per deck
 depending on the provider.
 
+## DSFR editor theme and custom image
+
+The compose overlay defaults to the digest-pinned custom image
+`ghcr.io/kaaloo/presenton@sha256:e8640957af9b45b7f0ef2664eca3c3abf243eac5243cec792cc3795336e24e35`
+(tag `v0.9.12-beta-dsfr.1`), built from the reviewed `dsfr/editor-surfaces`
+branch in `kaaloo/presenton`.
+It themes the editor chrome only; generated slide templates and PPTX export
+are unchanged. To use stock Presenton instead, set
+`PRESENTON_IMAGE=ghcr.io/presenton/presenton:v0.9.12-beta` before starting the
+sidecar.
+
+When the editor opens, Conversations adds `ui_theme`, `scheme`, and
+`host_origin` to the iframe URL using the current Cunningham theme. `dsfr` and
+`dsfr-dark` select the matching editor theme; other host themes keep the stock
+Presenton appearance. Later theme changes are sent through an origin-checked
+`postMessage` instead of reloading the iframe, so in-progress edits are not
+lost. The message target is always the explicit editor origin, never `*`.
+
 ## Run the integration spike
 
 `bin/presenton-spike` exercises the whole v1 loop with stdlib Python only:
