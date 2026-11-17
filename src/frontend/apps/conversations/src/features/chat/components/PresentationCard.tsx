@@ -1,11 +1,17 @@
 import { Button } from '@gouvfr-lasuite/cunningham-react';
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Box, Icon, Text } from '@/components';
+import { useCunninghamTheme } from '@/cunningham';
 import { exportPresentation } from '@/features/chat/api/presentationVersions';
 import { PresentationComments } from '@/features/chat/components/PresentationComments';
 import { PresentationVersions } from '@/features/chat/components/PresentationVersions';
+import {
+  buildEditorUrl,
+  createEditorThemeMessage,
+  getEditorOrigin,
+} from '@/features/chat/utils/editorTheme';
 import type { PresentationCardData } from '@/features/chat/utils/presentationCard';
 import { useConversationRouteId } from '@/utils/useConversationRouteId';
 
@@ -27,6 +33,37 @@ export const PresentationCard = ({
   const [versionsOpen, setVersionsOpen] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const conversationId = useConversationRouteId();
+  const editorTheme = useCunninghamTheme((state) => state.theme);
+  const [editorUrl, setEditorUrl] = useState<string | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  useEffect(() => {
+    if (!editorOpen) {
+      setEditorUrl(null);
+      return;
+    }
+    setEditorUrl(
+      (current) =>
+        current ??
+        buildEditorUrl(
+          presentation.editorUrl,
+          editorTheme,
+          window.location.origin,
+        ),
+    );
+  }, [editorOpen, editorTheme, presentation.editorUrl]);
+
+  const syncEditorTheme = useCallback(() => {
+    if (!editorUrl) return;
+    iframeRef.current?.contentWindow?.postMessage(
+      createEditorThemeMessage(editorTheme),
+      getEditorOrigin(editorUrl),
+    );
+  }, [editorTheme, editorUrl]);
+
+  useEffect(() => {
+    if (editorOpen) syncEditorTheme();
+  }, [editorOpen, syncEditorTheme]);
 
   // Always export the current deck: a restore or rework changes the content,
   // so the URL captured at generation time may be stale.
@@ -129,7 +166,16 @@ export const PresentationCard = ({
       {editorOpen && (
         <Box
           as="iframe"
-          src={presentation.editorUrl}
+          ref={iframeRef}
+          onLoad={syncEditorTheme}
+          src={
+            editorUrl ??
+            buildEditorUrl(
+              presentation.editorUrl,
+              editorTheme,
+              window.location.origin,
+            )
+          }
           title={t('Slide editor: {{title}}', { title: presentation.title })}
           $css="width: 100%; height: 70vh; min-height: 420px; border: 1px solid var(--c--globals--colors--border-default); border-radius: 8px; background: white;"
         />

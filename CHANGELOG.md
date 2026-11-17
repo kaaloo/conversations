@@ -10,7 +10,7 @@ and this project adheres to
 
 ### Added
 
-- ✨(poc) custom DSFR Presenton editor image
+- ✨(poc) DSFR theme for embedded Presenton editor
 - 🧪(poc) deck-card e2e and slides-loop results/evaluation note
 - ✨(poc) deck version history with restore and export
 - ✨(poc) slide comments and assistant rework for sidecar decks

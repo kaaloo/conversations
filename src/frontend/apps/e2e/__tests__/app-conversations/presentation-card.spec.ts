@@ -104,12 +104,33 @@ test.describe('Presentation deck card', () => {
 
     const frame = page.locator('iframe[title*="Slide editor"]');
     await expect(frame).toBeVisible();
-    await expect(frame).toHaveAttribute(
-      'src',
-      PRESENTATION_OUTPUT.presentation.editor_url,
+    const src = await frame.getAttribute('src');
+    expect(src).not.toBeNull();
+    const editorUrl = new URL(src!);
+    expect(editorUrl.searchParams.get('ui_theme')).toBe('presenton');
+    expect(editorUrl.searchParams.get('scheme')).toBe('light');
+    expect(editorUrl.searchParams.get('host_origin')).toBe(
+      new URL(page.url()).origin,
     );
     // Inline embed: no target=_blank (which would open a new tab).
     await expect(frame).not.toHaveAttribute('target', '_blank');
+  });
+
+  test('passes the DSFR theme to the embedded editor', async ({ page }) => {
+    await overrideConfig(page, { FRONTEND_THEME: 'dsfr' });
+    await page.goto(`/chat/${CONVERSATION_ID}`);
+    await page.getByRole('button', { name: 'Edit slides' }).click();
+
+    const frame = page.locator('iframe[title*="Slide editor"]');
+    await expect(frame).toBeVisible();
+    const src = await frame.getAttribute('src');
+    expect(src).not.toBeNull();
+    const editorUrl = new URL(src!);
+    expect(editorUrl.searchParams.get('ui_theme')).toBe('dsfr');
+    expect(editorUrl.searchParams.get('scheme')).toBe('light');
+    expect(editorUrl.searchParams.get('host_origin')).toBe(
+      new URL(page.url()).origin,
+    );
   });
 
   test('opens the comments and versions panels', async ({ page }) => {

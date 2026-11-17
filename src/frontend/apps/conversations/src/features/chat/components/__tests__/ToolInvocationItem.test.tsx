@@ -344,7 +344,13 @@ describe('ToolInvocationItem', () => {
 
       const frame = screen.getByTitle(/Slide editor/);
       expect(frame.tagName).toBe('IFRAME');
-      expect(frame).toHaveAttribute('src', PRESENTATION.editor_url);
+      const editorUrl = new URL(frame.getAttribute('src')!);
+      expect(editorUrl.searchParams.get('id')).toBe('11111111');
+      expect(editorUrl.searchParams.get('ui_theme')).toBe('presenton');
+      expect(editorUrl.searchParams.get('scheme')).toBe('light');
+      expect(editorUrl.searchParams.get('host_origin')).toBe(
+        window.location.origin,
+      );
       expect(frame).not.toHaveAttribute('target');
     });
 
