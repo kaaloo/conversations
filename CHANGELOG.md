@@ -30,6 +30,7 @@ and this project adheres to
 
 ### Changed
 
+- 🔒️(back) upgrade dnspython and soupsieve to fix CVEs
 - ♻️(back) split the agent service into turn modules
 - 🔊(back) log structured JSON lines in production
 
