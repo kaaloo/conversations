@@ -10,6 +10,7 @@ and this project adheres to
 
 ### Added
 
+- ✨(poc) custom DSFR Presenton editor image
 - 🧪(poc) deck-card e2e and slides-loop results/evaluation note
 - ✨(poc) deck version history with restore and export
 - ✨(poc) slide comments and assistant rework for sidecar decks
@@ -29,6 +30,7 @@ and this project adheres to
 
 ### Changed
 
+- 🔒️(back) upgrade dnspython and soupsieve to fix CVEs
 - ♻️(back) split the agent service into turn modules
 - 🔊(back) log structured JSON lines in production
 
